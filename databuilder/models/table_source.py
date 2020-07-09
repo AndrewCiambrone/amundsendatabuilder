@@ -7,6 +7,7 @@ from databuilder.models.neo4j_csv_serde import Neo4jCsvSerializable, NODE_KEY, \
 from databuilder.models.table_metadata import TableMetadata
 
 
+
 class TableSource(Neo4jCsvSerializable):
     # type: (...) -> None
     """

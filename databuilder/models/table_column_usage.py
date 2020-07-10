@@ -5,7 +5,7 @@ from databuilder.models.neo4j_csv_serde import (
 )
 from databuilder.models.table_metadata import TableMetadata
 from databuilder.models.user import User
-from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
+
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
 
@@ -51,7 +51,7 @@ class TableColumnUsage(Neo4jCsvSerializable):
     TABLE_USER_RELATION_TYPE = 'READ_BY'
 
     # Property key for relationship read, readby relationship
-    READ_RELATION_COUNT = 'read_count{}'.format(UNQUOTED_SUFFIX)
+    READ_RELATION_COUNT = 'read_count'
 
     def __init__(self,
                  col_readers,  # type: Iterable[ColumnReader]

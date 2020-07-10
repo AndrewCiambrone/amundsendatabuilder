@@ -1,12 +1,11 @@
 import copy
-from collections import namedtuple
 from six import string_types
 
-from typing import Iterable, Any, Union, Iterator, Dict, Set  # noqa: F401
+from typing import Iterable, Union, Iterator, Dict, Set, Tuple  # noqa: F401
 
 from databuilder.models.cluster import cluster_constants
 from databuilder.models.neo4j_csv_serde import Neo4jCsvSerializable
-from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
+
 from databuilder.models.schema import schema_constant
 
 from databuilder.models.graph_node import GraphNode
@@ -135,14 +134,15 @@ class DescriptionMetadata:
         return node
 
     def get_relation(self, start_node, start_key, end_key):
-        # type: (str, str) -> GraphRelationship
+        # type: (str, str, str) -> GraphRelationship
         relationship = GraphRelationship(
             start_label=start_node,
             start_key=start_key,
             end_label=self._label,
             end_key=end_key,
             type=DescriptionMetadata.DESCRIPTION_RELATION_TYPE,
-            reverse_type=DescriptionMetadata.INVERSE_DESCRIPTION_RELATION_TYPE
+            reverse_type=DescriptionMetadata.INVERSE_DESCRIPTION_RELATION_TYPE,
+            relationship_attributes={}
         )
         return relationship
 
@@ -152,7 +152,7 @@ class ColumnMetadata:
     COLUMN_KEY_FORMAT = '{db}://{cluster}.{schema}/{tbl}/{col}'
     COLUMN_NAME = 'name'
     COLUMN_TYPE = 'type'
-    COLUMN_ORDER = 'sort_order{}'.format(UNQUOTED_SUFFIX)  # int value needs to be unquoted when publish to neo4j
+    COLUMN_ORDER = 'sort_order'  # int value needs to be unquoted when publish to neo4j
     COLUMN_DESCRIPTION = 'description'
     COLUMN_DESCRIPTION_FORMAT = '{db}://{cluster}.{schema}/{tbl}/{col}/{description_id}'
 
@@ -204,7 +204,7 @@ class TableMetadata(Neo4jCsvSerializable):
     TABLE_NODE_LABEL = 'Table'
     TABLE_KEY_FORMAT = '{db}://{cluster}.{schema}/{tbl}'
     TABLE_NAME = 'name'
-    IS_VIEW = 'is_view{}'.format(UNQUOTED_SUFFIX)  # bool value needs to be unquoted when publish to neo4j
+    IS_VIEW = 'is_view'
 
     TABLE_DESCRIPTION_FORMAT = '{db}://{cluster}.{schema}/{tbl}/{description_id}'
 
@@ -231,7 +231,7 @@ class TableMetadata(Neo4jCsvSerializable):
 
     # Only for deduping database, cluster, and schema (table and column will be always processed)
     serialized_nodes_ids = set()  # type: Set[str]
-    serialized_rels_ids = set()  # type: Set[str]
+    serialized_rels_ids = set()  # type: Set[Tuple[str]]
 
     def __init__(self,
                  database,  # type: str
@@ -527,6 +527,6 @@ class TableMetadata(Neo4jCsvSerializable):
         ]
 
         for rel_tuple in others:
-            if rel_tuple.id not in TableMetadata.serialized_rels_ids:
-                TableMetadata.serialized_rels_ids.add(rel_tuple.id)
+            if (rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type) not in TableMetadata.serialized_rels_ids:
+                TableMetadata.serialized_rels_ids.add((rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type))
                 yield rel_tuple

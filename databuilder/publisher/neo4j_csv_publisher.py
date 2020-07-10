@@ -18,6 +18,7 @@ from typing import Set, List  # noqa: F401
 
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.publisher.neo4j_preprocessor import NoopRelationPreprocessor
+from databuilder.serializers.neo4_serializer import UNQUOTED_SUFFIX
 
 
 # Setting field_size_limit to solve the error below
@@ -63,8 +64,6 @@ LAST_UPDATED_EPOCH_MS = 'publisher_last_updated_epoch_ms'
 RELATION_PREPROCESSOR = 'relation_preprocessor'
 
 # CSV HEADER
-# A header with this suffix will be pass to Neo4j statement without quote
-UNQUOTED_SUFFIX = ':UNQUOTED'
 # A header for Node label
 NODE_LABEL_KEY = 'LABEL'
 # A header for Node key

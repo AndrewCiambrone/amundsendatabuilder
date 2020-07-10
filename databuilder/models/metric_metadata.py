@@ -1,12 +1,11 @@
 from collections import namedtuple
 
-from typing import Iterable, Any, Union, Iterator, Dict, Set  # noqa: F401
+from typing import Union, Iterator, Set, Tuple  # noqa: F401
 
 # TODO: We could separate TagMetadata from table_metadata to own module
 from databuilder.models.table_metadata import TagMetadata
 from databuilder.models.neo4j_csv_serde import (
-    Neo4jCsvSerializable, NODE_LABEL, NODE_KEY, RELATION_START_KEY, RELATION_END_KEY, RELATION_START_LABEL,
-    RELATION_END_LABEL, RELATION_TYPE, RELATION_REVERSE_TYPE)
+    Neo4jCsvSerializable)
 
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
@@ -61,8 +60,8 @@ class MetricMetadata(Neo4jCsvSerializable):
     METRIC_TAG_RELATION_TYPE = 'TAG'
     TAG_METRIC_RELATION_TYPE = 'TAG_OF'
 
-    serialized_nodes = set()  # type: Set[GraphNode]
-    serialized_rels = set()  # type: Set[GraphRelationship]
+    serialized_nodes_ids = set()  # type: Set[str]
+    serialized_rels_ids = set()  # type: Set[Tuple[str]]
 
     def __init__(self,
                  dashboard_group,  # type: str
@@ -176,8 +175,8 @@ class MetricMetadata(Neo4jCsvSerializable):
         others = []
 
         for node_tuple in others:
-            if node_tuple not in MetricMetadata.serialized_nodes:
-                MetricMetadata.serialized_nodes.add(node_tuple)
+            if node_tuple.id not in MetricMetadata.serialized_nodes_ids:
+                MetricMetadata.serialized_nodes_ids.add(node_tuple.id)
                 yield node_tuple
 
     def create_next_relation(self):
@@ -245,6 +244,6 @@ class MetricMetadata(Neo4jCsvSerializable):
         others = []
 
         for rel_tuple in others:
-            if rel_tuple not in MetricMetadata.serialized_rels:
-                MetricMetadata.serialized_rels.add(rel_tuple)
+            if (rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type) not in MetricMetadata.serialized_rels_ids:
+                MetricMetadata.serialized_rels_ids.add((rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type))
                 yield rel_tuple

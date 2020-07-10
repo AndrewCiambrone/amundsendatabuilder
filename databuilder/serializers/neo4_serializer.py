@@ -20,15 +20,14 @@ def convert_node(node):
         NODE_LABEL: node.label,
         NODE_KEY: node.id
     }
-    for key, value in node.node_attributes.values():
+    for key, value in node.node_attributes.items():
         node_dict[key] = value
     return node_dict
 
 
 def convert_relationship(relationship):
     # type: (GraphRelationship) -> Dict[str, Any]
-
-    return {
+    base_relationship_doc = {
         RELATION_START_KEY: relationship.start_key,
         RELATION_START_LABEL: relationship.start_label,
         RELATION_END_KEY: relationship.end_key,
@@ -36,3 +35,8 @@ def convert_relationship(relationship):
         RELATION_TYPE: relationship.type,
         RELATION_REVERSE_TYPE: relationship.reverse_type
     }
+
+    for key, value in relationship.relationship_attributes.items():
+        base_relationship_doc[key] = value
+
+    return base_relationship_doc

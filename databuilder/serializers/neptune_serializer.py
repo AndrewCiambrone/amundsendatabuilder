@@ -38,6 +38,16 @@ def convert_relationship(relationship):
         NEPTUNE_RELATIONSHIP_HEADER_TO: relationship.start_key,
         NEPTUNE_HEADER_LABEL: relationship.reverse_type
     }
+
+    for key, value in relationship.relationship_attributes.items():
+        neptune_value_type = _get_neptune_type_for_value(value)
+        doc_key = "{key_name}:{neptune_value_type}".format(
+            key_name=key,
+            neptune_value_type=neptune_value_type
+        )
+        forward_relationship_doc[doc_key] = value
+        reverse_relationship_doc[doc_key] = value
+
     return [
         forward_relationship_doc,
         reverse_relationship_doc

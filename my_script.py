@@ -10,6 +10,7 @@ from databuilder.extractor.postgres_metadata_extractor import PostgresMetadataEx
 from databuilder.extractor.sql_alchemy_extractor import SQLAlchemyExtractor
 from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
+from databuilder.publisher.neptune_csv_publisher import NeptuneCSVPublisher
 from databuilder.task.task import DefaultTask
 
 es_host = None
@@ -55,7 +56,8 @@ def create_redshift_extraction_job():
         task=DefaultTask(
             extractor=PostgresMetadataExtractor(),
             loader=FSNeptuneCSVLoader()
-        )
+        ),
+        publisher=NeptuneCSVPublisher()
     )
     return job
 

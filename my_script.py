@@ -9,8 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from databuilder.extractor.postgres_metadata_extractor import PostgresMetadataExtractor
 from databuilder.extractor.sql_alchemy_extractor import SQLAlchemyExtractor
 from databuilder.job.job import DefaultJob
-from databuilder.loader.file_system_neptune_csv_loader import FSNeputuneCSVLoader
-from databuilder.transformer.neo4j_serializeable_to_neptune_transformer import Neo4jSerializableToNeptuneTransformer
+from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
 from databuilder.task.task import DefaultTask
 
 es_host = None
@@ -46,16 +45,15 @@ def create_redshift_extraction_job():
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.USE_CATALOG_AS_CLUSTER_NAME): True,
         'extractor.postgres_metadata.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
-        'loader.filesystem_csv_neptune.{}'.format(FSNeputuneCSVLoader.NODE_DIR_PATH): node_files_folder,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeputuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeputuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.NODE_DIR_PATH): node_files_folder,
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False
     })
     job = DefaultJob(
         conf=job_config,
         task=DefaultTask(
             extractor=PostgresMetadataExtractor(),
-            loader=FSNeputuneCSVLoader(),
-            transformer=Neo4jSerializableToNeptuneTransformer()
+            loader=FSNeptuneCSVLoader()
         )
     )
     return job

@@ -117,7 +117,8 @@ class Application(Neo4jCsvSerializable):
             end_key=self.get_application_model_key(),
             end_label=Application.APPLICATION_LABEL,
             type=Application.TABLE_APPLICATION_RELATION_TYPE,
-            reverse_type=Application.APPLICATION_TABLE_RELATION_TYPE
+            reverse_type=Application.APPLICATION_TABLE_RELATION_TYPE,
+            relationship_attributes={}
         )
         results = [graph_relationship]
         return results

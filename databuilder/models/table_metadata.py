@@ -230,8 +230,8 @@ class TableMetadata(Neo4jCsvSerializable):
     TAG_TABLE_RELATION_TYPE = 'TAG'
 
     # Only for deduping database, cluster, and schema (table and column will be always processed)
-    serialized_nodes = set()  # type: Set[Any]
-    serialized_rels = set()  # type: Set[Any]
+    serialized_nodes_ids = set()  # type: Set[str]
+    serialized_rels_ids = set()  # type: Set[str]
 
     def __init__(self,
                  database,  # type: str
@@ -430,8 +430,8 @@ class TableMetadata(Neo4jCsvSerializable):
         ]
 
         for node_tuple in others:
-            if node_tuple not in TableMetadata.serialized_nodes:
-                TableMetadata.serialized_nodes.add(node_tuple)
+            if node_tuple.id not in TableMetadata.serialized_nodes_ids:
+                TableMetadata.serialized_nodes_ids.add(node_tuple.id)
                 yield node_tuple
 
     def create_next_relation(self):
@@ -450,7 +450,8 @@ class TableMetadata(Neo4jCsvSerializable):
             end_key=self._get_table_key(),
             end_label=TableMetadata.TABLE_NODE_LABEL,
             type=TableMetadata.SCHEMA_TABLE_RELATION_TYPE,
-            reverse_type=TableMetadata.TABLE_SCHEMA_RELATION_TYPE
+            reverse_type=TableMetadata.TABLE_SCHEMA_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield schema_table_relationship
 
@@ -467,7 +468,8 @@ class TableMetadata(Neo4jCsvSerializable):
                     end_label=TagMetadata.TAG_NODE_LABEL,
                     end_key=TagMetadata.get_tag_key(tag),
                     type=TableMetadata.TABLE_TAG_RELATION_TYPE,
-                    reverse_type=TableMetadata.TAG_TABLE_RELATION_TYPE
+                    reverse_type=TableMetadata.TAG_TABLE_RELATION_TYPE,
+                    relationship_attributes={}
                 )
                 yield tag_relationship
 
@@ -478,7 +480,8 @@ class TableMetadata(Neo4jCsvSerializable):
                 end_label=ColumnMetadata.COLUMN_NODE_LABEL,
                 end_key=self._get_col_key(col),
                 type=TableMetadata.TABLE_COL_RELATION_TYPE,
-                reverse_type=TableMetadata.COL_TABLE_RELATION_TYPE
+                reverse_type=TableMetadata.COL_TABLE_RELATION_TYPE,
+                relationship_attributes={}
             )
             yield column_relationship
 
@@ -498,6 +501,7 @@ class TableMetadata(Neo4jCsvSerializable):
                         end_key=TagMetadata.get_tag_key(tag),
                         type=ColumnMetadata.COL_TAG_RELATION_TYPE,
                         reverse_type=ColumnMetadata.TAG_COL_RELATION_TYPE,
+                        relationship_attributes={}
                     )
                     yield tag_column_relationship
 
@@ -508,7 +512,8 @@ class TableMetadata(Neo4jCsvSerializable):
                 start_key=self._get_database_key(),
                 end_key=self._get_cluster_key(),
                 type=TableMetadata.DATABASE_CLUSTER_RELATION_TYPE,
-                reverse_type=TableMetadata.CLUSTER_DATABASE_RELATION_TYPE
+                reverse_type=TableMetadata.CLUSTER_DATABASE_RELATION_TYPE,
+                relationship_attributes={}
             ),
             GraphRelationship(
                 start_label=TableMetadata.CLUSTER_NODE_LABEL,
@@ -516,11 +521,12 @@ class TableMetadata(Neo4jCsvSerializable):
                 start_key=self._get_cluster_key(),
                 end_key=self._get_schema_key(),
                 type=TableMetadata.CLUSTER_SCHEMA_RELATION_TYPE,
-                reverse_type=TableMetadata.SCHEMA_CLUSTER_RELATION_TYPE
+                reverse_type=TableMetadata.SCHEMA_CLUSTER_RELATION_TYPE,
+                relationship_attributes={}
             )
         ]
 
         for rel_tuple in others:
-            if rel_tuple not in TableMetadata.serialized_rels:
-                TableMetadata.serialized_rels.add(rel_tuple)
+            if rel_tuple.id not in TableMetadata.serialized_rels_ids:
+                TableMetadata.serialized_rels_ids.add(rel_tuple.id)
                 yield rel_tuple

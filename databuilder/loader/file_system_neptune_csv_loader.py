@@ -128,19 +128,19 @@ class FSNeptuneCSVLoader(Loader):
 
         relation = csv_serializable.next_relation()
         while relation:
-            relation_dict = neptune_serializer.convert_relationship(relation)
+            relation_dicts = neptune_serializer.convert_relationship(relation)
             key2 = (relation.start_label,
                     relation.end_label,
                     relation.type,
-                    len(relation_dict))
+                    len(relation_dicts[0]))
 
             file_suffix = '{}_{}_{}'.format(key2[0], key2[1], key2[2])
-            relation_writer = self._get_writer(relation_dict,
+            relation_writer = self._get_writer(relation_dicts[0],
                                                self._relation_file_mapping,
                                                key2,
                                                self._relation_dir,
                                                file_suffix)
-            relation_writer.writerow(relation_dict)
+            relation_writer.writerows(relation_dicts)
             relation = csv_serializable.next_relation()
 
     def _get_writer(self,
@@ -199,4 +199,4 @@ class FSNeptuneCSVLoader(Loader):
 
     def get_scope(self):
         # type: () -> str
-        return "loader.filesystem_csv_neo4j"
+        return "loader.filesystem_csv_neptune"

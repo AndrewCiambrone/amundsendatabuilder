@@ -252,7 +252,8 @@ class DashboardMetadata(Neo4jCsvSerializable):
             end_label=DashboardMetadata.DASHBOARD_GROUP_NODE_LABEL,
             end_key=self._get_dashboard_group_key(),
             type=DashboardMetadata.CLUSTER_DASHBOARD_GROUP_RELATION_TYPE,
-            reverse_type=DashboardMetadata.DASHBOARD_GROUP_CLUSTER_RELATION_TYPE
+            reverse_type=DashboardMetadata.DASHBOARD_GROUP_CLUSTER_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield cluster_dashboard_group_relationship
 
@@ -264,7 +265,8 @@ class DashboardMetadata(Neo4jCsvSerializable):
                 end_label=DashboardMetadata.DASHBOARD_DESCRIPTION_NODE_LABEL,
                 end_key=self._get_dashboard_group_description_key(),
                 type=DashboardMetadata.DASHBOARD_DESCRIPTION_RELATION_TYPE,
-                reverse_type=DashboardMetadata.DESCRIPTION_DASHBOARD_RELATION_TYPE
+                reverse_type=DashboardMetadata.DESCRIPTION_DASHBOARD_RELATION_TYPE,
+                relationship_attributes={}
             )
             yield dashboard_group_description_relationship
 
@@ -275,7 +277,8 @@ class DashboardMetadata(Neo4jCsvSerializable):
             start_key=self._get_dashboard_key(),
             end_key=self._get_dashboard_group_key(),
             type=DashboardMetadata.DASHBOARD_DASHBOARD_GROUP_RELATION_TYPE,
-            reverse_type=DashboardMetadata.DASHBOARD_GROUP_DASHBOARD_RELATION_TYPE
+            reverse_type=DashboardMetadata.DASHBOARD_GROUP_DASHBOARD_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield dashboard_group_dashboard_relationship
 
@@ -287,7 +290,8 @@ class DashboardMetadata(Neo4jCsvSerializable):
                 start_key=self._get_dashboard_key(),
                 end_key=self._get_dashboard_description_key(),
                 type=DashboardMetadata.DASHBOARD_DESCRIPTION_RELATION_TYPE,
-                reverse_type=DashboardMetadata.DESCRIPTION_DASHBOARD_RELATION_TYPE
+                reverse_type=DashboardMetadata.DESCRIPTION_DASHBOARD_RELATION_TYPE,
+                relationship_attributes={}
             )
             yield dashboard_description_relationship
 
@@ -300,6 +304,7 @@ class DashboardMetadata(Neo4jCsvSerializable):
                     start_key=self._get_dashboard_key(),
                     end_key=TagMetadata.get_tag_key(tag),
                     type=DashboardMetadata.DASHBOARD_TAG_RELATION_TYPE,
-                    reverse_type=DashboardMetadata.TAG_DASHBOARD_RELATION_TYPE
+                    reverse_type=DashboardMetadata.TAG_DASHBOARD_RELATION_TYPE,
+                    relationship_attributes={}
                 )
                 yield dashboard_tag_relationship

@@ -83,7 +83,8 @@ class DashboardExecution(Neo4jCsvSerializable):
             end_label=DashboardExecution.DASHBOARD_EXECUTION_LABEL,
             end_key=self._get_last_execution_node_key(),
             type=DashboardExecution.DASHBOARD_EXECUTION_RELATION_TYPE,
-            reverse_type=DashboardExecution.EXECUTION_DASHBOARD_RELATION_TYPE
+            reverse_type=DashboardExecution.EXECUTION_DASHBOARD_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield relationship
 

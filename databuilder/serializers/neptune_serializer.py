@@ -53,7 +53,7 @@ def convert_node(node):
 
     for attr_key, attr_value in node.node_attributes.items():
         neptune_value_type = _get_neptune_type_for_value(attr_value)
-        doc_key = "{key_name:neptune_value_type".format(
+        doc_key = "{key_name}:{neptune_value_type}".format(
             key_name=attr_key,
             neptune_value_type=neptune_value_type
         )

@@ -197,7 +197,8 @@ class MetricMetadata(Neo4jCsvSerializable):
             end_label=MetricMetadata.DASHBOARD_NODE_LABEL,
             end_key=self._get_dashboard_key(),
             type=MetricMetadata.METRIC_DASHBOARD_RELATION_TYPE,
-            reverse_type=MetricMetadata.DASHBOARD_METRIC_RELATION_TYPE
+            reverse_type=MetricMetadata.DASHBOARD_METRIC_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield dashboard_metric_relation
 
@@ -209,7 +210,8 @@ class MetricMetadata(Neo4jCsvSerializable):
                 end_label=MetricMetadata.DESCRIPTION_NODE_LABEL,
                 end_key=self._get_metric_description_key(),
                 type=MetricMetadata.METRIC_DESCRIPTION_RELATION_TYPE,
-                reverse_type=MetricMetadata.DESCRIPTION_METRIC_RELATION_TYPE
+                reverse_type=MetricMetadata.DESCRIPTION_METRIC_RELATION_TYPE,
+                relationship_attributes={}
             )
             yield metric_description_relation
 
@@ -222,7 +224,8 @@ class MetricMetadata(Neo4jCsvSerializable):
                     end_label=TagMetadata.TAG_NODE_LABEL,
                     end_key=TagMetadata.get_tag_key(tag),
                     type=MetricMetadata.METRIC_TAG_RELATION_TYPE,
-                    reverse_type=MetricMetadata.TAG_METRIC_RELATION_TYPE
+                    reverse_type=MetricMetadata.TAG_METRIC_RELATION_TYPE,
+                    relationship_attributes={}
                 )
                 yield tag_relation
 
@@ -234,7 +237,8 @@ class MetricMetadata(Neo4jCsvSerializable):
                 end_label=MetricMetadata.METRIC_TYPE_NODE_LABEL,
                 end_key=self._get_metric_type_key(),
                 type=MetricMetadata.METRIC_METRIC_TYPE_RELATION_TYPE,
-                reverse_type=MetricMetadata.METRIC_TYPE_METRIC_RELATION_TYPE
+                reverse_type=MetricMetadata.METRIC_TYPE_METRIC_RELATION_TYPE,
+                relationship_attributes={}
             )
             yield type_relation
 

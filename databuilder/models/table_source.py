@@ -95,7 +95,8 @@ class TableSource(Neo4jCsvSerializable):
             end_label=TableMetadata.TABLE_NODE_LABEL,
             end_key=self.get_metadata_model_key(),
             type=TableSource.SOURCE_TABLE_RELATION_TYPE,
-            reverse_type=TableSource.TABLE_SOURCE_RELATION_TYPE
+            reverse_type=TableSource.TABLE_SOURCE_RELATION_TYPE,
+            relationship_attributes={}
         )
         results = [relationship]
         return results

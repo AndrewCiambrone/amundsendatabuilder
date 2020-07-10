@@ -95,7 +95,8 @@ class TableLineage(Neo4jCsvSerializable):
                         table=m.group(4)
                     ),
                     type=TableLineage.ORIGIN_DEPENDENCY_RELATION_TYPE,
-                    reverse_type=TableLineage.DEPENDENCY_ORIGIN_RELATION_TYPE
+                    reverse_type=TableLineage.DEPENDENCY_ORIGIN_RELATION_TYPE,
+                    relationship_attributes={}
                 )
                 results.append(relationship)
         return results

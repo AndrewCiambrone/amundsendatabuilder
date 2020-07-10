@@ -92,7 +92,8 @@ class DashboardQuery(Neo4jCsvSerializable):
             ),
             end_key=self._get_query_node_key(),
             type=DashboardQuery.DASHBOARD_QUERY_RELATION_TYPE,
-            reverse_type=DashboardQuery.QUERY_DASHBOARD_RELATION_TYPE
+            reverse_type=DashboardQuery.QUERY_DASHBOARD_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield relationship
 

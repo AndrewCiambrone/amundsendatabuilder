@@ -109,7 +109,8 @@ class TableColumnStats(Neo4jCsvSerializable):
             end_key=self.get_col_key(),
             end_label=ColumnMetadata.COLUMN_NODE_LABEL,
             type=TableColumnStats.STAT_Column_RELATION_TYPE,
-            reverse_type=TableColumnStats.Column_STAT_RELATION_TYPE
+            reverse_type=TableColumnStats.Column_STAT_RELATION_TYPE,
+            relationship_attributes={}
         )
         results = [relationship]
         return results

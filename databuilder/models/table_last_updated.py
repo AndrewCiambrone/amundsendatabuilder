@@ -106,7 +106,8 @@ class TableLastUpdated(Neo4jCsvSerializable):
             end_label=TableLastUpdated.LAST_UPDATED_NODE_LABEL,
             end_key=self.get_last_updated_model_key(),
             type=TableLastUpdated.TABLE_LASTUPDATED_RELATION_TYPE,
-            reverse_type=TableLastUpdated.LASTUPDATED_TABLE_RELATION_TYPE
+            reverse_type=TableLastUpdated.LASTUPDATED_TABLE_RELATION_TYPE,
+            relationship_attributes={}
         )
         results = [relationship]
 

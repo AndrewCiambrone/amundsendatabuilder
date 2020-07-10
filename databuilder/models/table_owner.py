@@ -93,7 +93,8 @@ class TableOwner(Neo4jCsvSerializable):
                 end_key=self.get_metadata_model_key(),
                 end_label='Table',
                 type=TableOwner.OWNER_TABLE_RELATION_TYPE,
-                reverse_type=TableOwner.TABLE_OWNER_RELATION_TYPE
+                reverse_type=TableOwner.TABLE_OWNER_RELATION_TYPE,
+                relationship_attributes={}
             )
             results.append(relationship)
 

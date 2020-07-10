@@ -170,7 +170,8 @@ class User(Neo4jCsvSerializable):
                 end_label=User.USER_NODE_LABEL,
                 end_key=self.get_user_model_key(email=self.manager_email),
                 type=User.USER_MANAGER_RELATION_TYPE,
-                reverse_type=User.MANAGER_USER_RELATION_TYPE
+                reverse_type=User.MANAGER_USER_RELATION_TYPE,
+                relationship_attributes={}
             )
             return [relationship]
         return []

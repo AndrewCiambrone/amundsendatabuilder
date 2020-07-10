@@ -107,7 +107,8 @@ class Watermark(Neo4jCsvSerializable):
             end_key=self.get_metadata_model_key(),
             end_label='Table',
             type=Watermark.WATERMARK_TABLE_RELATION_TYPE,
-            reverse_type=Watermark.TABLE_WATERMARK_RELATION_TYPE
+            reverse_type=Watermark.TABLE_WATERMARK_RELATION_TYPE,
+            relationship_attributes={}
         )
         results = [relation]
         return results

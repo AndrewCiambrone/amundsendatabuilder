@@ -76,7 +76,8 @@ class DashboardLastModifiedTimestamp(Neo4jCsvSerializable):
             end_key=self._get_last_modified_node_key(),
             end_label=timestamp_constants.NODE_LABEL,
             type=timestamp_constants.LASTUPDATED_RELATION_TYPE,
-            reverse_type=timestamp_constants.LASTUPDATED_REVERSE_RELATION_TYPE
+            reverse_type=timestamp_constants.LASTUPDATED_REVERSE_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield relationship
 

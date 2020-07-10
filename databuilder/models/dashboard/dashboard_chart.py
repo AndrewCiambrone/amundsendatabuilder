@@ -97,7 +97,8 @@ class DashboardChart(Neo4jCsvSerializable):
             end_label=DashboardChart.DASHBOARD_CHART_LABEL,
             end_key=self._get_chart_node_key(),
             type=DashboardChart.CHART_RELATION_TYPE,
-            reverse_type=DashboardChart.CHART_REVERSE_RELATION_TYPE
+            reverse_type=DashboardChart.CHART_REVERSE_RELATION_TYPE,
+            relationship_attributes={}
         )
         yield relationship
 

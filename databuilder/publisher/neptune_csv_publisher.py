@@ -1,10 +1,12 @@
 import datetime
 
+import os
 from os import listdir
 from os.path import isfile, join
 
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.utils import s3_client
+from databuilder import neptune_client
 
 
 class NeptuneCSVPublisher(Publisher):
@@ -18,31 +20,62 @@ class NeptuneCSVPublisher(Publisher):
     # Base amundsen data path
     BASE_AMUNDSEN_DATA_PATH = 'base_amundsen_data_path'
 
+    NEPTUNE_ENDPOINT = 'neptune_endpoint'
+    NEPTUNE_PORT = 'neptune_port'
+
+    # AWS Region
+    REGION = 'region'
+
+    AWS_ACCESS_KEY = 'aws_access_key'
+    AWS_SECRET_KEY = 'aws_secret_key'
+
     def __init__(self):
         # type: () -> None
         super(NeptuneCSVPublisher, self).__init__()
 
     def init(self, conf):
-        self.bucket_name = conf.get_string(NeptuneCSVPublisher.BUCKET_NAME)
-        self.base_amundsen_data_path = conf.get_string(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH)
+
         self.node_files_dir = conf.get_string(NeptuneCSVPublisher.NODE_FILES_DIR)
         self.relation_files_dir = conf.get_string(NeptuneCSVPublisher.RELATION_FILES_DIR)
 
-    def publish_impl(self):
-        self.upload_files(self.node_files_dir)
-        self.upload_files(self.relation_files_dir)
+        self.bucket_name = conf.get_string(NeptuneCSVPublisher.BUCKET_NAME)
+        self.base_amundsen_data_path = conf.get_string(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH)
+        self.aws_region = conf.get_string(NeptuneCSVPublisher.REGION)
+        self.aws_access_key = conf.get_string(NeptuneCSVPublisher.AWS_ACCESS_KEY)
+        self.aws_secret_key = conf.get_string(NeptuneCSVPublisher.AWS_SECRET_KEY)
 
-    def upload_files(self, directory):
-        file_names = [join(directory, f) for f in listdir(directory) if isfile(join(directory, f))]
+        self.neptune_endpoint = conf.get_string(NeptuneCSVPublisher.NEPTUNE_ENDPOINT)
+        self.neptune_port = conf.get_int(NeptuneCSVPublisher.NEPTUNE_PORT)
+
+    def publish_impl(self):
         datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
-        for file_name in file_names:
-            with open(file_name, 'r', encoding='utf8') as file_csv:
-                file_path = "{base_directory}/{datetime_portion}/{file_name}".format(
-                    base_directory=self.base_amundsen_data_path,
-                    datetime_portion=datetime_portion,
+        s3_folder_location = "{base_directory}/{datetime_portion}".format(
+            base_directory=self.base_amundsen_data_path,
+            datetime_portion=datetime_portion,
+        )
+        self.upload_files(s3_folder_location)
+        bulk_upload_id = neptune_client.make_bulk_upload_request(
+            neptune_endpoint=self.neptune_endpoint,
+            neptune_port=self.neptune_port,
+            bucket=self.bucket_name,
+            s3_folder_location=s3_folder_location,
+            region=self.aws_region,
+            access_key=self.aws_access_key,
+            secret_key=self.aws_secret_key
+        )
+
+    def upload_files(self, s3_folder_location):
+        node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]
+        edge_names = [join(self.relation_files_dir, f) for f in listdir(self.relation_files_dir) if isfile(join(self.relation_files_dir, f))]
+        file_names = node_names + edge_names
+        for file_location in file_names:
+            with open(file_location, 'rb') as file_csv:
+                file_name = os.path.basename(file_location)
+                file_path = "{s3_folder_location}/{file_name}".format(
+                    s3_folder_location=s3_folder_location,
                     file_name=file_name
                 )
-                s3_client.upload_file(self.BUCKET_NAME, file_path, file_csv)
+                s3_client.upload_file(self.bucket_name, file_path, file_csv)
 
     def get_scope(self):
         # type: () -> str

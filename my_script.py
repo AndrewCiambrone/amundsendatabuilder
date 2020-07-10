@@ -13,13 +13,6 @@ from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
 from databuilder.publisher.neptune_csv_publisher import NeptuneCSVPublisher
 from databuilder.task.task import DefaultTask
 
-es_host = None
-neptune_host = None
-if len(sys.argv) > 1:
-    es_host = sys.argv[1]
-if len(sys.argv) > 2:
-    neptune_host = sys.argv[2]
-
 Base = declarative_base()
 
 
@@ -37,6 +30,13 @@ def create_redshift_extraction_job():
     tmp_folder = '/var/tmp/amundsen/table_metadata'
     node_files_folder = '{tmp_folder}/nodes/'.format(tmp_folder=tmp_folder)
     relationship_files_folder = '{tmp_folder}/relationships/'.format(tmp_folder=tmp_folder)
+    s3_bucket = os.getenv('S3_BUCKET')
+    s3_directory = "amundsen"
+    access_key = os.getenv('AWS_KEY')
+    access_secret = os.getenv('AWS_SECRET_KEY')
+    aws_zone = os.getenv("AWS_ZONE")
+    neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
+    neptune_port = os.getenv("NEPTUNE_PORT")
 
     where_clause_suffix = textwrap.dedent("""
         where table_schema = 'public'
@@ -49,7 +49,16 @@ def create_redshift_extraction_job():
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.NODE_DIR_PATH): node_files_folder,
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.FORCE_CREATE_DIR): True
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.FORCE_CREATE_DIR): True,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NODE_FILES_DIR): node_files_folder,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.RELATION_FILES_DIR): relationship_files_folder,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BUCKET_NAME): s3_bucket,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_ENDPOINT): neptune_endpoint,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_PORT): neptune_port,
     })
     job = DefaultJob(
         conf=job_config,

@@ -1,5 +1,5 @@
 import requests
-import sys, datetime, hashlib, hmac
+import sys, hashlib, hmac
 from datetime import datetime
 import urllib
 import os
@@ -30,6 +30,7 @@ def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_l
         aws_region=region,
         body_payload=payload
     )
+    return response_json.get('payload', {}).get('loadId')
 
 
 def normalize_query_string(query):
@@ -55,7 +56,17 @@ def get_signature_key(key, dateStamp, regionName):
     return kSigning
 
 
-def make_authorization_header(method, host, canonical_uri, canonical_querystring, canonical_headers,  aws_access_key, aws_secret_key, aws_region, request_datetime):
+def make_authorization_header(
+        method,
+        host,
+        endpoint,
+        query_string,
+        payload,
+        aws_access_key,
+        aws_secret_key,
+        aws_region,
+        request_datetime
+):
     # type: (str, str, str, str, str, str, str, str, datetime) -> str
 
     algorithm = 'AWS4-HMAC-SHA256'
@@ -64,7 +75,18 @@ def make_authorization_header(method, host, canonical_uri, canonical_querystring
     credential_scope = date_stamp_str + '/' + aws_region + '/neptune-db/aws4_request'
     signed_headers = 'host;x-amz-date'
     signing_key = get_signature_key(aws_secret_key, date_stamp_str, aws_region)
-    canonical_request = method + '\n' + canonical_uri + '\n' + canonical_querystring + '\n' + canonical_headers + '\n' + signed_headers + '\n' + payload_hash
+
+    canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + datetime_str + '\n'
+    hashed_payload = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+    canonical_request = "{method}\n{endpoint}\n{querystring}\n{canonical_headers}\n{signed_headers}\n{hashed_payload}".format(
+        method=method,
+        endpoint=endpoint,
+        querystring=query_string,
+        canonical_headers=canonical_headers,
+        signed_headers=signed_headers,
+        hashed_payload=hashed_payload
+    )
+
     hashed_request = hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()
     string_to_sign = "{algorithm}\n{amazon_date}\n{credential_scope}\n{hashed_request}".format(
         algorithm=algorithm,
@@ -86,33 +108,37 @@ def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, 
     # type: (str, str, str, str, str, str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]) -> Dict[str, Any]
 
     if query_params is None:
-        query_params = ''
+        query_params = {}
 
+    query_params = urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote)
+    query_params = query_params.replace('%27', '%22')
+    query_params = normalize_query_string(query_params)
 
     if body_payload is None:
-        body_payload = ''
+        body_payload = {}
 
-    now = datetime.datetime.utcnow()
+    body_payload = urllib.parse.urlencode(body_payload, quote_via=urllib.parse.quote)
+    body_payload = body_payload.replace('%27', '%22')
+
+    now = datetime.utcnow()
     amazon_date_str = now.strftime('%Y%m%dT%H%M%SZ')
 
-    payload_hash = hashlib.sha256(body_payload.encode('utf-8')).hexdigest()
-
     authorization_header = make_authorization_header(
+        method=method,
         host=host,
-        canonical_uri=endpoint,
+        endpoint=endpoint,
+        query_string=query_params,
+        payload=body_payload,
         aws_access_key=aws_access_key,
         aws_secret_key=aws_secret_key,
         request_datetime=now,
         aws_region=aws_region
-
     )
 
     full_url = "https://{host}{endpoint}".format(
         host=host,
         endpoint=endpoint
     )
-    request_query_params = None
-    request_body_payload = None
     request_headers = {
         'x-amz-date': amazon_date_str,
         'Authorization': authorization_header
@@ -122,7 +148,7 @@ def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, 
         request_headers['content-type'] = 'application/x-www-form-urlencoded'
         response = requests.post(
             url=full_url,
-            data=request_body_payload,
+            data=body_payload,
             verify=False,
             headers=request_headers
         )
@@ -130,7 +156,7 @@ def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, 
     elif method == 'GET':
         response = requests.get(
             url=full_url,
-            params=request_query_params,
+            params=query_params,
             verify=False,
             headers=request_headers
         )

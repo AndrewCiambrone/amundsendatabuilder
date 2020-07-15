@@ -60,3 +60,5 @@ unidecode
 
 requests==2.23.0,<3.0
 boto3==1.9.242
+
+gremlinpython==3.4.7

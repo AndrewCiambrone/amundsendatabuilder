@@ -77,10 +77,10 @@ def _get_neptune_type_for_value(value):
     # type: (Any) -> Optional[str]
     if isinstance(value, six.string_types):
         return "String"
-    elif isinstance(value, six.integer_types):
-        return "Long"
     elif isinstance(value, bool):
         return "Bool"
+    elif isinstance(value, six.integer_types):
+        return "Long"
     elif isinstance(value, float):
         return "Double"
 

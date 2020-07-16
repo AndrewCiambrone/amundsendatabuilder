@@ -63,6 +63,7 @@ class NeptuneCSVPublisher(Publisher):
             access_key=self.aws_access_key,
             secret_key=self.aws_secret_key
         )
+        print(bulk_upload_id)
 
     def upload_files(self, s3_folder_location):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

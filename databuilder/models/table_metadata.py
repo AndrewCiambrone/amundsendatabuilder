@@ -414,14 +414,14 @@ class TableMetadata(Neo4jCsvSerializable):
                 }
             ),
             GraphNode(
-                id=self._get_database_key(),
+                id=self._get_cluster_key(),
                 label=TableMetadata.CLUSTER_NODE_LABEL,
                 node_attributes={
                     'name': self.cluster
                 }
             ),
             GraphNode(
-                id=self._get_database_key(),
+                id=self._get_schema_key(),
                 label=TableMetadata.SCHEMA_NODE_LABEL,
                 node_attributes={
                     'name': self.schema

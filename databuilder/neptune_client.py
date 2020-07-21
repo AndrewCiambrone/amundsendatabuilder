@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 
 
 def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_location, region, access_key, secret_key):
-    # type: (str, str, str, str, str, str, str) -> None
+    # type: (str, str, str, str, str, str, str) -> str
     s3_source = "s3://{bucket}/{s3_folder_location}".format(
         bucket=bucket,
         s3_folder_location=s3_folder_location
@@ -21,7 +21,7 @@ def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_l
         "secretKey": secret_key
     }
     neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
-    response_json = make_signed_request(
+    response_json = _make_signed_request(
         method='POST',
         host=neptune_host,
         endpoint='/loader/',
@@ -33,7 +33,24 @@ def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_l
     return response_json.get('payload', {}).get('loadId')
 
 
-def normalize_query_string(query):
+def query_with_gremlin(neptune_endpoint, neptune_port, region, access_key, secret_key, gremlin_query):
+    # type: (str, str, str, str, str, str, str) -> Dict
+    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
+    query_params = {'gremlin': gremlin_query}
+    response_json = _make_signed_request(
+        method='POST',
+        host=neptune_host,
+        endpoint='/loader/',
+        aws_access_key=access_key,
+        aws_secret_key=secret_key,
+        aws_region=region,
+        query_params=query_params
+    )
+
+    return response_json
+
+
+def _normalize_query_string(query):
     # type: (str) -> str
     kv = (list(map(str.strip, s.split("=")))
           for s in query.split('&')
@@ -44,19 +61,19 @@ def normalize_query_string(query):
     return normalized
 
 
-def sign(key, msg):
+def _sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
 
 
-def get_signature_key(key, dateStamp, regionName):
-    kDate = sign(('AWS4' + key).encode('utf-8'), dateStamp)
-    kRegion = sign(kDate, regionName)
-    kService = sign(kRegion, 'neptune-db')
-    kSigning = sign(kService, 'aws4_request')
+def _get_signature_key(key, dateStamp, regionName):
+    kDate = _sign(('AWS4' + key).encode('utf-8'), dateStamp)
+    kRegion = _sign(kDate, regionName)
+    kService = _sign(kRegion, 'neptune-db')
+    kSigning = _sign(kService, 'aws4_request')
     return kSigning
 
 
-def make_authorization_header(
+def _make_authorization_header(
         method,
         host,
         endpoint,
@@ -74,7 +91,7 @@ def make_authorization_header(
     datetime_str = request_datetime.strftime('%Y%m%dT%H%M%SZ')
     credential_scope = date_stamp_str + '/' + aws_region + '/neptune-db/aws4_request'
     signed_headers = 'host;x-amz-date'
-    signing_key = get_signature_key(aws_secret_key, date_stamp_str, aws_region)
+    signing_key = _get_signature_key(aws_secret_key, date_stamp_str, aws_region)
 
     canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + datetime_str + '\n'
     hashed_payload = hashlib.sha256(payload.encode('utf-8')).hexdigest()
@@ -104,7 +121,7 @@ def make_authorization_header(
     )
 
 
-def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, aws_region, query_params=None, body_payload=None):
+def _make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, aws_region, query_params=None, body_payload=None):
     # type: (str, str, str, str, str, str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]) -> Dict[str, Any]
 
     if query_params is None:
@@ -112,7 +129,7 @@ def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, 
 
     query_params = urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote)
     query_params = query_params.replace('%27', '%22')
-    query_params = normalize_query_string(query_params)
+    query_params = _normalize_query_string(query_params)
 
     if body_payload is None:
         body_payload = {}
@@ -123,7 +140,7 @@ def make_signed_request(method, host, endpoint, aws_access_key, aws_secret_key, 
     now = datetime.utcnow()
     amazon_date_str = now.strftime('%Y%m%dT%H%M%SZ')
 
-    authorization_header = make_authorization_header(
+    authorization_header = _make_authorization_header(
         method=method,
         host=host,
         endpoint=endpoint,

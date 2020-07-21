@@ -7,11 +7,16 @@ from elasticsearch import Elasticsearch
 from pyhocon import ConfigFactory
 from sqlalchemy.ext.declarative import declarative_base
 
+from databuilder.extractor.neptune_extractor import NeptuneExtractor
+from databuilder.transformer.base_transformer import NoopTransformer
+from databuilder.extractor.neptune_search_data_extractor import NeptuneSearchDataExtractor
 from databuilder.extractor.postgres_metadata_extractor import PostgresMetadataExtractor
 from databuilder.extractor.sql_alchemy_extractor import SQLAlchemyExtractor
+from databuilder.loader.file_system_elasticsearch_json_loader import FSElasticsearchJSONLoader
 from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
 from databuilder.publisher.neptune_csv_publisher import NeptuneCSVPublisher
+from databuilder.publisher.elasticsearch_publisher import ElasticsearchPublisher
 from databuilder.task.task import DefaultTask
 
 Base = declarative_base()
@@ -38,6 +43,7 @@ def create_redshift_extraction_job():
     aws_zone = os.getenv("AWS_ZONE")
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
+
 
     where_clause_suffix = textwrap.dedent("""
         where table_schema = 'public'
@@ -72,9 +78,68 @@ def create_redshift_extraction_job():
     return job
 
 
+def create_elastic_search_publisher_job():
+    extracted_search_data_path = '/var/tmp/amundsen/search_data.json'
+
+    access_key = os.getenv('AWS_KEY')
+    access_secret = os.getenv('AWS_SECRET_KEY')
+    aws_zone = os.getenv("AWS_ZONE")
+
+    neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
+    neptune_port = os.getenv("NEPTUNE_PORT")
+
+    elastic_search_host = os.getenv('ELASTIC_SEARCH_HOST')
+
+
+    elastic_search_client = Elasticsearch([
+        {'host': elastic_search_host},
+    ])
+
+    task = DefaultTask(
+        loader=FSElasticsearchJSONLoader(),
+        extractor=NeptuneSearchDataExtractor(),
+        transformer=NoopTransformer()
+    )
+
+    elasticsearch_new_index_key = 'tables' + str(uuid.uuid4())
+    model_name = 'databuilder.models.table_elasticsearch_document.TableESDocument'
+
+    job_config = ConfigFactory.from_dict({
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.NEPTUNE_ENDPOINT_CONFIG_KEY): neptune_endpoint,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.NEPTUNE_PORT_CONFIG_KEY): neptune_port,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.REGION_CONFIG_KEY): aws_zone,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.AWS_ACCESS_KEY_CONFIG_KEY): access_key,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.AWS_SECRET_KEY_CONFIG_KEY): access_secret,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.MODEL_CLASS_CONFIG_KEY): model_name,
+        'loader.filesystem.elasticsearch.{}'.format(FSElasticsearchJSONLoader.FILE_PATH_CONFIG_KEY):
+            extracted_search_data_path,
+        'loader.filesystem.elasticsearch.{}'.format(FSElasticsearchJSONLoader.FILE_MODE_CONFIG_KEY): 'w',
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.FILE_PATH_CONFIG_KEY):
+            extracted_search_data_path,
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.FILE_MODE_CONFIG_KEY): 'r',
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.ELASTICSEARCH_CLIENT_CONFIG_KEY):
+            elastic_search_client,
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.ELASTICSEARCH_NEW_INDEX_CONFIG_KEY):
+            elasticsearch_new_index_key,
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.ELASTICSEARCH_DOC_TYPE_CONFIG_KEY): 'table',
+        'publisher.elasticsearch.{}'.format(ElasticsearchPublisher.ELASTICSEARCH_ALIAS_CONFIG_KEY): 'table_search_index'
+    })
+
+    job = DefaultJob(
+        conf=job_config,
+        task=task,
+        publisher=ElasticsearchPublisher()
+    )
+
+    return job
+
+
 def main():
-    job = create_redshift_extraction_job()
-    job.launch()
+    redshift_job = create_redshift_extraction_job()
+    redshift_job.launch()
+
+    elastic_job = create_elastic_search_publisher_job()
+    elastic_job.launch()
 
 
 if __name__ == '__main__':

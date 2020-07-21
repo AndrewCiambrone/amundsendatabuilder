@@ -34,8 +34,37 @@ class NeptuneExtractor(Extractor):
         self.neptune_port = conf.get_string(NeptuneExtractor.NEPTUNE_PORT_CONFIG_KEY)
         self.gremlin_query = conf.get_string(NeptuneExtractor.GREMLIN_QUERY_CONFIG_KEY)
 
+        self._extract_iter = None  # type: Union[None, Iterator]
+
+        model_class = conf.get(NeptuneExtractor.MODEL_CLASS_CONFIG_KEY, None)
+        if model_class:
+            module_name, class_name = model_class.rsplit(".", 1)
+            mod = importlib.import_module(module_name)
+            self.model_class = getattr(mod, class_name)
+
     def close(self):
         pass
+
+    def _get_extract_iter(self):
+        # type: () -> Iterator[Any]
+        """
+        Execute {cypher_query} and yield result one at a time
+        """
+        self.results = neptune_client.query_with_gremlin(
+            neptune_endpoint=self.neptune_endpoint,
+            neptune_port=self.neptune_port,
+            region=self.aws_region,
+            access_key=self.aws_access_key,
+            secret_key=self.aws_secret_key,
+            gremlin_query=self.gremlin_query
+        )
+
+        for result in self.results:
+            if hasattr(self, 'model_class'):
+                obj = self.model_class(**result)
+                yield obj
+            else:
+                yield result
 
     def extract(self):
         # type: () -> Any

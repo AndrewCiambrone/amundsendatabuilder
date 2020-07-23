@@ -1,3 +1,4 @@
+import time
 import importlib
 import logging
 from typing import Any, Iterator, Union  # noqa: F401
@@ -26,7 +27,6 @@ class NeptuneExtractor(Extractor):
 
     def init(self, conf):
         # type: (ConfigTree) -> None
-        self.conf = conf.with_fallback(NeptuneExtractor.DEFAULT_CONFIG)
         self.aws_access_key = conf.get_string(NeptuneExtractor.AWS_ACCESS_KEY_CONFIG_KEY)
         self.aws_secret_key = conf.get_string(NeptuneExtractor.AWS_SECRET_KEY_CONFIG_KEY)
         self.aws_region = conf.get_string(NeptuneExtractor.REGION_CONFIG_KEY)
@@ -59,12 +59,40 @@ class NeptuneExtractor(Extractor):
             gremlin_query=self.gremlin_query
         )
 
-        for result in self.results:
+        # TODO REDO ALL AND abstract it
+        db_name = self.results['result']['data']['@value'][0]['@value'][1]
+        cluster_name = self.results['result']['data']['@value'][0]['@value'][3]
+        schema_name = self.results['result']['data']['@value'][0]['@value'][5]
+        tables = [table['@value'] for table in self.results['result']['data']['@value'][0]['@value'][7]['@value']]
+
+        for table in tables:
+            table_id = table[1]
+            table_name = table[3]
+            column_names = table[5]['@value']
+            init_params = {
+                'database': db_name,
+                'cluster': cluster_name,
+                'schema': schema_name,
+                'name': table_name,
+                'key': table_id,
+                'description': '',
+                'last_updated_timestamp': int(time.time()),
+                'column_names': column_names,
+                'column_descriptions': [],
+                'total_usage': 0,
+                'unique_usage': 0,
+                'tags': [],
+                'badges': [],
+                'display_name': None,
+                'schema_description': '',
+                'programmatic_descriptions': []
+            }
             if hasattr(self, 'model_class'):
-                obj = self.model_class(**result)
+
+                obj = self.model_class(**init_params)
                 yield obj
             else:
-                yield result
+                yield init_params
 
     def extract(self):
         # type: () -> Any

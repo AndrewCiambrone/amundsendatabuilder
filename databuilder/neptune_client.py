@@ -38,7 +38,7 @@ def query_with_gremlin(neptune_endpoint, neptune_port, region, access_key, secre
     neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
     query_params = {'gremlin': gremlin_query}
     response_json = _make_signed_request(
-        method='POST',
+        method='GET',
         host=neptune_host,
         endpoint='/gremlin/',
         aws_access_key=access_key,

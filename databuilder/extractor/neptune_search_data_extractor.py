@@ -19,7 +19,8 @@ class NeptuneSearchDataExtractor(Extractor):
                 by(out('CLUSTER').values('name')).
                 by(out('CLUSTER').out('SCHEMA').values('name')).
                 by(out('CLUSTER').out('SCHEMA').out('TABLE').
-                    project('table_name', 'columns').
+                    project('table_id', 'table_name', 'columns').
+                        by(id).
                         by('name').
                         by(out('COLUMN').values('name').fold()).
                     fold())

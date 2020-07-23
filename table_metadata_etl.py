@@ -1,5 +1,3 @@
-import sys
-import json
 import os
 import textwrap
 import uuid
@@ -90,14 +88,13 @@ def create_elastic_search_publisher_job():
 
     elastic_search_host = os.getenv('ELASTIC_SEARCH_HOST')
 
-
-    elastic_search_client = Elasticsearch([
-        {'host': elastic_search_host},
-    ])
+    elastic_search_client = Elasticsearch(
+        elastic_search_host
+    )
 
     task = DefaultTask(
-        loader=FSElasticsearchJSONLoader(),
         extractor=NeptuneSearchDataExtractor(),
+        loader=FSElasticsearchJSONLoader(),
         transformer=NoopTransformer()
     )
 

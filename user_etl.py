@@ -1,7 +1,4 @@
 import os
-import textwrap
-import uuid
-from elasticsearch import Elasticsearch
 from pyhocon import ConfigFactory
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -10,10 +7,11 @@ from databuilder.extractor.postgres_user_extractor import PostgresUserExtractor
 from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
 from databuilder.publisher.neptune_csv_publisher import NeptuneCSVPublisher
-from databuilder.publisher.elasticsearch_publisher import ElasticsearchPublisher
 from databuilder.task.task import DefaultTask
 
+
 Base = declarative_base()
+
 
 def connection_string():
     user = os.getenv('DW_USER')
@@ -69,7 +67,6 @@ def create_redshift_extraction_job():
 def main():
     redshift_job = create_redshift_extraction_job()
     redshift_job.launch()
-
 
 
 if __name__ == '__main__':

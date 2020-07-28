@@ -44,6 +44,24 @@ def upsert_node(g, node_id, node_label, node_properties):
     node_traversal.next()
 
 
+def get_table_info_for_search(g):
+    result = g.V().hasLabel('Table'). \
+        project('database', 'cluster', 'schema', 'schema_description', 'name', 'key', 'description', 'column_names', 'column_descriptions', 'total_usage', 'unique_usage'). \
+        by(__.out('TABLE_OF').out('SCHEMA_OF').out('CLUSTER_OF').values('name')). \
+        by(__.out('TABLE_OF').out('SCHEMA_OF').values('name')). \
+        by(__.out('TABLE_OF').values('name')). \
+        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION_OF').values('description'), __.constant(''))). \
+        by('name'). \
+        by(T.id). \
+        by(__.coalesce(__.out('DESCRIPTION_OF').values('description'), __.constant(''))). \
+        by(__.out('COLUMN').values('name').fold()). \
+        by(__.out('COLUMN').out('DESCRIPTION_OF').fold()). \
+        by(__.coalesce(__.outE('READ_BY').values('read_count'), __.constant(0)).sum()). \
+        by(__.outE('READ_BY').count()). \
+        toList()
+    return result
+
+
 def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_properties: Dict[str, Any]):
     create_traversal = __.V(start_node_id).addE(edge_label).to(__.V(end_node_id)).property(T.id, edge_id)
     edge_traversal = g.V(start_node_id).outE(edge_label).hasId(edge_id).\

@@ -100,10 +100,10 @@ def create_elastic_search_publisher_job():
 
     elasticsearch_new_index_key = 'tables' + str(uuid.uuid4())
     model_name = 'databuilder.models.table_elasticsearch_document.TableESDocument'
+    neptune_host = "wss://{}:{}/gremlin".format(neptune_endpoint, neptune_port)
 
     job_config = ConfigFactory.from_dict({
-        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.NEPTUNE_ENDPOINT_CONFIG_KEY): neptune_endpoint,
-        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.NEPTUNE_PORT_CONFIG_KEY): neptune_port,
+        'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.NEPTUNE_HOST_CONFIG_KEY): neptune_host,
         'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.REGION_CONFIG_KEY): aws_zone,
         'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.AWS_ACCESS_KEY_CONFIG_KEY): access_key,
         'extractor.search_data.extractor.neptune.{}'.format(NeptuneExtractor.AWS_SECRET_KEY_CONFIG_KEY): access_secret,

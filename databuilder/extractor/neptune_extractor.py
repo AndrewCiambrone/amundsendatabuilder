@@ -13,8 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 class NeptuneExtractor(Extractor):
 
-    NEPTUNE_ENDPOINT_CONFIG_KEY = 'neptune_endpoint'
-    NEPTUNE_PORT_CONFIG_KEY = 'neptune_port'
+    NEPTUNE_HOST_CONFIG_KEY = 'neptune_host'
 
     # AWS Region
     REGION_CONFIG_KEY = 'region'
@@ -30,8 +29,7 @@ class NeptuneExtractor(Extractor):
         self.aws_access_key = conf.get_string(NeptuneExtractor.AWS_ACCESS_KEY_CONFIG_KEY)
         self.aws_secret_key = conf.get_string(NeptuneExtractor.AWS_SECRET_KEY_CONFIG_KEY)
         self.aws_region = conf.get_string(NeptuneExtractor.REGION_CONFIG_KEY)
-        self.neptune_endpoint = conf.get_string(NeptuneExtractor.NEPTUNE_ENDPOINT_CONFIG_KEY)
-        self.neptune_port = conf.get_string(NeptuneExtractor.NEPTUNE_PORT_CONFIG_KEY)
+        self.neptune_host = conf.get_string(NeptuneExtractor.NEPTUNE_HOST_CONFIG_KEY)
         self.gremlin_query = conf.get_string(NeptuneExtractor.GREMLIN_QUERY_CONFIG_KEY)
 
         self._extract_iter = None  # type: Union[None, Iterator]
@@ -50,49 +48,33 @@ class NeptuneExtractor(Extractor):
         """
         Execute {cypher_query} and yield result one at a time
         """
-        self.results = neptune_client.query_with_gremlin(
-            neptune_endpoint=self.neptune_endpoint,
-            neptune_port=self.neptune_port,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            secret_key=self.aws_secret_key,
-            gremlin_query=self.gremlin_query
+        auth_dict = {
+            'aws_access_key_id': self.aws_access_key,
+            'aws_secret_access_key': self.aws_secret_key,
+            'service_region': self.aws_region
+        }
+        extra_options = {
+            'session_token': None
+        }
+        g = neptune_client.get_graph(
+            host=self.neptune_host,
+            password=auth_dict,
+            aws4auth_options=extra_options
         )
+        self.results = neptune_client.get_table_info_for_search(g)
+        for result in self.results:
+            result['last_updated_timestamp'] = int(time.time())
+            result['tags'] = []
+            result['badges'] = []
+            result['display_name'] = None
+            result['programmatic_descriptions'] = []
 
-        # TODO REDO ALL AND abstract it
-        db_name = self.results['result']['data']['@value'][0]['@value'][1]
-        cluster_name = self.results['result']['data']['@value'][0]['@value'][3]
-        schema_name = self.results['result']['data']['@value'][0]['@value'][5]
-        tables = [table['@value'] for table in self.results['result']['data']['@value'][0]['@value'][7]['@value']]
-
-        for table in tables:
-            table_id = table[1]
-            table_name = table[3]
-            column_names = table[5]['@value']
-            init_params = {
-                'database': db_name,
-                'cluster': cluster_name,
-                'schema': schema_name,
-                'name': table_name,
-                'key': table_id,
-                'description': '',
-                'last_updated_timestamp': int(time.time()),
-                'column_names': column_names,
-                'column_descriptions': [],
-                'total_usage': 0,
-                'unique_usage': 0,
-                'tags': [],
-                'badges': [],
-                'display_name': None,
-                'schema_description': '',
-                'programmatic_descriptions': []
-            }
             if hasattr(self, 'model_class'):
 
-                obj = self.model_class(**init_params)
+                obj = self.model_class(**result)
                 yield obj
             else:
-                yield init_params
+                yield result
 
     def extract(self):
         # type: () -> Any

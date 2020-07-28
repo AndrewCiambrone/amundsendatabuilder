@@ -35,22 +35,7 @@ def create_redshift_extraction_job():
     aws_zone = os.getenv("AWS_ZONE")
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
-
-    auth_dict = {
-        'aws_access_key_id': access_key,
-        'aws_secret_access_key': access_secret,
-        'service_region': aws_zone
-    }
-    extra_options = {
-        'session_token': None
-    }
     neptune_host = "wss://{}:{}/gremlin".format(neptune_endpoint, neptune_port)
-
-    neptune_session = neptune_client.get_graph(
-        host=neptune_host,
-        password=auth_dict,
-        aws4auth_options=extra_options
-    )
 
     job_config = ConfigFactory.from_dict({
         'extractor.postgres_table_usage.{}'.format(PostgresTableUsageExtractor.SQL_STATEMENT_KEY): table_usage_sql,

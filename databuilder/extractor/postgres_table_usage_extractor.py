@@ -60,13 +60,12 @@ class PostgresTableUsageExtractor(Extractor):
 
             yield ColumnUsageModel(
                 database=database_name,
-
+                cluster=database_name,
                 schema=schema_name,
                 table_name=table_name,
-
-                first_name=first.capitalize(),
-                last_name=last.capitalize(),
-                do_not_update_empty_attribute=True
+                column_name="*",
+                user_email=user_name,
+                read_count=total_queries_count
             )
 
     def _get_raw_extract_iter(self):

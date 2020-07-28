@@ -31,7 +31,7 @@ def get_graph(*,
 
 
 def upsert_node(g, node_id, node_label, node_properties):
-    create_traversal = __.V(node_label).property(T.id, node_id)
+    create_traversal = __.addV(node_label).property(T.id, node_id)
     node_traversal = g.V().hasId(node_id).\
         fold().\
         coalesce(__.unfold(), create_traversal)
@@ -42,24 +42,6 @@ def upsert_node(g, node_id, node_label, node_properties):
         node_traversal = node_traversal.property(key, value)
 
     node_traversal.next()
-
-
-def get_table_info_for_search(g):
-    result = g.V().hasLabel('Table'). \
-        project('database', 'cluster', 'schema', 'schema_description', 'name', 'key', 'description', 'column_names', 'column_descriptions', 'total_usage', 'unique_usage'). \
-        by(__.out('TABLE_OF').out('SCHEMA_OF').out('CLUSTER_OF').values('name')). \
-        by(__.out('TABLE_OF').out('SCHEMA_OF').values('name')). \
-        by(__.out('TABLE_OF').values('name')). \
-        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION_OF').values('description'), __.constant(''))). \
-        by('name'). \
-        by(T.id). \
-        by(__.coalesce(__.out('DESCRIPTION_OF').values('description'), __.constant(''))). \
-        by(__.out('COLUMN').values('name').fold()). \
-        by(__.out('COLUMN').out('DESCRIPTION_OF').fold()). \
-        by(__.coalesce(__.outE('READ_BY').values('read_count'), __.constant(0)).sum()). \
-        by(__.outE('READ_BY').count()). \
-        toList()
-    return result
 
 
 def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_properties: Dict[str, Any]):
@@ -76,6 +58,24 @@ def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_propert
         edge_traversal = edge_traversal.property(key, value)
 
     edge_traversal.next()
+
+
+def get_table_info_for_search(g):
+    result = g.V().hasLabel('Table'). \
+        project('database', 'cluster', 'schema', 'schema_description', 'name', 'key', 'description', 'column_names', 'column_descriptions', 'total_usage', 'unique_usage'). \
+        by(__.out('TABLE_OF').out('SCHEMA_OF').out('CLUSTER_OF').values('name')). \
+        by(__.out('TABLE_OF').out('SCHEMA_OF').values('name')). \
+        by(__.out('TABLE_OF').values('name')). \
+        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION_OF').values('description'), __.constant(''))). \
+        by('name'). \
+        by(T.id). \
+        by(__.coalesce(__.out('DESCRIPTION').values('description'), __.constant(''))). \
+        by(__.out('COLUMN').values('name').fold()). \
+        by(__.out('COLUMN').out('DESCRIPTION').fold()). \
+        by(__.coalesce(__.outE('READ_BY').values('read_count'), __.constant(0)).sum()). \
+        by(__.outE('READ_BY').count()). \
+        toList()
+    return result
 
 
 def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,

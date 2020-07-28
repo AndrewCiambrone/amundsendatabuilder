@@ -10,7 +10,7 @@ from databuilder.utils import s3_client
 from databuilder import neptune_client
 
 
-class NeptuneCSVPublisher(Publisher):
+class NeptuneUpsertPublisher(Publisher):
 
     # A directory that contains CSV files for nodes
     NODE_FILES_DIR = 'node_files_directory'
@@ -31,20 +31,20 @@ class NeptuneCSVPublisher(Publisher):
 
     def __init__(self):
         # type: () -> None
-        super(NeptuneCSVPublisher, self).__init__()
+        super(NeptuneUpsertPublisher, self).__init__()
 
     def init(self, conf):
-        self.node_files_dir = conf.get_string(NeptuneCSVPublisher.NODE_FILES_DIR)
-        self.relation_files_dir = conf.get_string(NeptuneCSVPublisher.RELATION_FILES_DIR)
+        self.node_files_dir = conf.get_string(NeptuneUpsertPublisher.NODE_FILES_DIR)
+        self.relation_files_dir = conf.get_string(NeptuneUpsertPublisher.RELATION_FILES_DIR)
 
-        self.bucket_name = conf.get_string(NeptuneCSVPublisher.BUCKET_NAME)
-        self.base_amundsen_data_path = conf.get_string(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH)
-        self.aws_region = conf.get_string(NeptuneCSVPublisher.REGION)
-        self.aws_access_key = conf.get_string(NeptuneCSVPublisher.AWS_ACCESS_KEY)
-        self.aws_secret_key = conf.get_string(NeptuneCSVPublisher.AWS_SECRET_KEY)
+        self.bucket_name = conf.get_string(NeptuneUpsertPublisher.BUCKET_NAME)
+        self.base_amundsen_data_path = conf.get_string(NeptuneUpsertPublisher.BASE_AMUNDSEN_DATA_PATH)
+        self.aws_region = conf.get_string(NeptuneUpsertPublisher.REGION)
+        self.aws_access_key = conf.get_string(NeptuneUpsertPublisher.AWS_ACCESS_KEY)
+        self.aws_secret_key = conf.get_string(NeptuneUpsertPublisher.AWS_SECRET_KEY)
 
-        self.neptune_endpoint = conf.get_string(NeptuneCSVPublisher.NEPTUNE_ENDPOINT)
-        self.neptune_port = conf.get_int(NeptuneCSVPublisher.NEPTUNE_PORT)
+        self.neptune_endpoint = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_ENDPOINT)
+        self.neptune_port = conf.get_int(NeptuneUpsertPublisher.NEPTUNE_PORT)
 
     def publish_impl(self):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

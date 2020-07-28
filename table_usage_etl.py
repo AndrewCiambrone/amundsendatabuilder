@@ -6,7 +6,7 @@ from databuilder.extractor.sql_alchemy_extractor import SQLAlchemyExtractor
 from databuilder.extractor.postgres_user_extractor import PostgresUserExtractor
 from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
-from databuilder.publisher.neptune_csv_publisher import NeptuneCSVPublisher
+from databuilder.publisher.neptune_upsert_publisher import NeptuneUpsertPublisher
 from databuilder.task.task import DefaultTask
 
 Base = declarative_base()
@@ -42,15 +42,15 @@ def create_redshift_extraction_job():
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False,
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.FORCE_CREATE_DIR): True,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NODE_FILES_DIR): node_files_folder,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.RELATION_FILES_DIR): relationship_files_folder,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BUCKET_NAME): s3_bucket,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_ENDPOINT): neptune_endpoint,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_PORT): neptune_port,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.NODE_FILES_DIR): node_files_folder,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.RELATION_FILES_DIR): relationship_files_folder,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.BUCKET_NAME): s3_bucket,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.REGION): aws_zone,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.AWS_ACCESS_KEY): access_key,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.AWS_SECRET_KEY): access_secret,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.NEPTUNE_ENDPOINT): neptune_endpoint,
+        'publisher.neptune_upsert_publisher.{}'.format(NeptuneUpsertPublisher.NEPTUNE_PORT): neptune_port,
     })
     job = DefaultJob(
         conf=job_config,
@@ -58,7 +58,7 @@ def create_redshift_extraction_job():
             extractor=PostgresUserExtractor(),
             loader=FSNeptuneCSVLoader()
         ),
-        publisher=NeptuneCSVPublisher()
+        publisher=NeptuneUpsertPublisher()
     )
     return job
 

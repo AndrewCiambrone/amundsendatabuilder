@@ -64,7 +64,6 @@ class NeptuneExtractor(Extractor):
         self.results = neptune_client.get_table_info_for_search(g)
         for result in self.results:
             result['last_updated_timestamp'] = int(time.time())
-            result['tags'] = []
             result['badges'] = []
             result['display_name'] = None
             result['programmatic_descriptions'] = []

@@ -1,10 +1,110 @@
 import requests
-import sys, hashlib, hmac
+import hashlib, hmac
 from datetime import datetime
 import urllib
 import os
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union, Mapping
+from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTransport, WebsocketClientTransport
+from gremlin_python.driver.driver_remote_connection import \
+    DriverRemoteConnection
+from gremlin_python.process.anonymous_traversal import traversal
+from gremlin_python.process.graph_traversal import GraphTraversalSource
+from gremlin_python.process.traversal import T, Order, gt
+from gremlin_python.process.graph_traversal import __
+
+g = None
+
+
+def get_graph(*,
+              host: str,
+              port: Optional[int] = None,
+              user: str = None,
+              password: Optional[Union[str, Mapping[str, str]]] = None,
+              driver_remote_connection_options: Mapping[str, Any] = {},
+              aws4auth_options: Mapping[str, Any] = {},
+              websocket_options: Mapping[str, Any] = {}) -> GraphTraversalSource:
+    global g
+    if g is None:
+        g = create_gremlin_session(host=host, password=password, aws4auth_options=aws4auth_options)
+    return g
+
+
+def upsert_node(g, node_id, node_label, node_properties):
+    create_traversal = __.V(node_label).property(T.id, node_id)
+    node_traversal = g.V().hasId(node_id).\
+        fold().\
+        coalesce(__.unfold(), create_traversal)
+    for key, value in node_properties.items():
+        if not value:
+            continue
+        key = key.split(':')[0]
+        node_traversal = node_traversal.property(key, value)
+
+    node_traversal.next()
+
+
+def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_properties: Dict[str, Any]):
+    create_traversal = __.V(start_node_id).addE(edge_label).to(__.V(end_node_id)).property(T.id, edge_id)
+    edge_traversal = g.V(start_node_id).outE(edge_label).hasId(edge_id).\
+        fold().\
+        coalesce(__.unfold(), create_traversal)
+    for key, value in edge_properties.items():
+        key_split = key.split(':')
+        key = key_split[0]
+        value_type = key_split[1]
+        if value_type == "Long":
+            value = int(value)
+        edge_traversal = edge_traversal.property(key, value)
+
+    edge_traversal.next()
+
+
+def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,
+                 password: Optional[Union[str, Mapping[str, str]]] = None,
+                 driver_remote_connection_options: Mapping[str, Any] = {},
+                 aws4auth_options: Mapping[str, Any] = {}, websocket_options: Mapping[str, Any] = {}) -> GraphTraversalSource:
+        driver_remote_connection_options = dict(driver_remote_connection_options)
+        # as others, we repurpose host a url
+        driver_remote_connection_options.update(url=host)
+        # port should be part of that url
+        if port is not None:
+            raise NotImplementedError(f'port is not allowed! port={port}')
+
+        # always g for Neptune
+        driver_remote_connection_options.update(traversal_source='g')
+
+        # for IAM auth, we need the triplet
+        if isinstance(password, Mapping):
+            if user or 'aws_access_key_id' not in password or 'aws_secret_access_key' not in password or \
+                    'service_region' not in password:
+                raise NotImplementedError(f'to use authentication, pass a Mapping with aws_access_key_id, '
+                                          f'aws_secret_access_key, service_region!')
+
+            aws_access_key_id = password['aws_access_key_id']
+            aws_secret_access_key = password['aws_secret_access_key']
+            service_region = password['service_region']
+
+            def factory() -> Aws4AuthWebsocketTransport:
+                return Aws4AuthWebsocketTransport(aws_access_key_id=aws_access_key_id,
+                                                  aws_secret_access_key=aws_secret_access_key,
+                                                  service_region=service_region,
+                                                  extra_aws4auth_options=aws4auth_options or {},
+                                                  extra_websocket_options=websocket_options or {})
+            driver_remote_connection_options.update(transport_factory=factory)
+        elif password is not None:
+            raise NotImplementedError(f'to use authentication, pass a Mapping with aws_access_key_id, '
+                                      f'aws_secret_access_key, service_region!')
+        else:
+            raise NotImplementedError(f'to use authentication, pass a Mapping with aws_access_key_id, '
+                                      f'aws_secret_access_key, service_region!')
+
+            # we could use the default Transport, but then we'd have to take different options, which feels clumsier.
+            def factory() -> WebsocketClientTransport:
+                return WebsocketClientTransport(extra_websocket_options=websocket_options or {})
+            driver_remote_connection_options.update(transport_factory=factory)
+
+        return traversal().withRemote(DriverRemoteConnection(**driver_remote_connection_options))
 
 
 def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_location, region, access_key, secret_key):

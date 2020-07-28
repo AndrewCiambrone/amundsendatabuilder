@@ -59,7 +59,7 @@ class PostgresTableUsageExtractor(Extractor):
             (database_name, schema_name, table_name, user_name, total_queries_count) = row
 
             yield ColumnUsageModel(
-                database=database_name,
+                database="postgres",
                 cluster=database_name,
                 schema=schema_name,
                 table_name=table_name,

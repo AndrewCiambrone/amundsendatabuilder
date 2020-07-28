@@ -20,8 +20,7 @@ class NeptuneUpsertPublisher(Publisher):
     # Base amundsen data path
     BASE_AMUNDSEN_DATA_PATH = 'base_amundsen_data_path'
 
-    NEPTUNE_ENDPOINT = 'neptune_endpoint'
-    NEPTUNE_PORT = 'neptune_port'
+    NEPTUNE_HOST = 'neptune_host'
 
     # AWS Region
     REGION = 'region'
@@ -37,108 +36,78 @@ class NeptuneUpsertPublisher(Publisher):
         self.node_files_dir = conf.get_string(NeptuneUpsertPublisher.NODE_FILES_DIR)
         self.relation_files_dir = conf.get_string(NeptuneUpsertPublisher.RELATION_FILES_DIR)
 
-        self.bucket_name = conf.get_string(NeptuneUpsertPublisher.BUCKET_NAME)
-        self.base_amundsen_data_path = conf.get_string(NeptuneUpsertPublisher.BASE_AMUNDSEN_DATA_PATH)
         self.aws_region = conf.get_string(NeptuneUpsertPublisher.REGION)
         self.aws_access_key = conf.get_string(NeptuneUpsertPublisher.AWS_ACCESS_KEY)
         self.aws_secret_key = conf.get_string(NeptuneUpsertPublisher.AWS_SECRET_KEY)
 
-        self.neptune_endpoint = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_ENDPOINT)
-        self.neptune_port = conf.get_int(NeptuneUpsertPublisher.NEPTUNE_PORT)
+        self.neptune_host = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_HOST)
 
     def publish_impl(self):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]
         edge_names = [join(self.relation_files_dir, f) for f in listdir(self.relation_files_dir) if isfile(join(self.relation_files_dir, f))]
 
+        upserted_node_ids = set()
         for node_file_location in node_names:
-            with open(node_file_location, 'rb') as file_csv:
+            with open(node_file_location, 'r') as file_csv:
                 reader = DictReader(file_csv)
                 for row in reader:
+                    if row['~id'] in upserted_node_ids:
+                        continue
                     self.upsert_node_row(row)
+                    upserted_node_ids.add(row['~id'])
 
         for edge_file_location in edge_names:
-            with open(edge_file_location, 'rb') as file_csv:
+            with open(edge_file_location, 'r') as file_csv:
                 reader = DictReader(file_csv)
                 for row in reader:
                     self.upsert_edge_row(row)
 
     def upsert_node_row(self, row):
-        create_transversal_query = "addV({label})".format(
-            label=row['~label']
+        auth_dict = {
+            'aws_access_key_id': self.aws_access_key,
+            'aws_secret_access_key': self.aws_secret_key,
+            'service_region': self.aws_region
+        }
+        g = neptune_client.get_graph(
+            host=self.neptune_host,
+            password=auth_dict,
         )
-        for key, value in row.items():
-            key_split = key.split(':')
-            key = key_split.split(':')[0]
-            value_type = key_split.split(':')[1]
-            if key == '~id':
-                create_transversal_query = create_transversal_query + ".property('id', '{node_id}')".format(
-                    node_id=row.get('~id')
-                )
-            elif key == '~label':
-                pass
-            else:
-                if value_type == "String":
-                    value = "'{value}'".format(value=value)
-                create_transversal_query = create_transversal_query + ".property('{key}', {value})".format(
-                    key=key,
-                    value=value
-                )
-
-        gremlin_query = """
-            g.V().has('{node_label}', 'id', '{node_id}').
-                fold().
-                coalesce(unfold(), {create_transversal}
-        """.format(
-            node_id=row.get('~id'),
-            node_label=row.get('~label'),
-            create_transversal=create_transversal_query
-        )
-        neptune_client.query_with_gremlin(
-            neptune_endpoint=self.neptune_endpoint,
-            neptune_port=self.neptune_port,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            secret_key=self.aws_secret_key,
-            gremlin_query=gremlin_query
+        node_properties = {
+            key: value
+            for key, value in row.items()
+            if key not in ['~id', '~label']
+        }
+        print('Upserting {} {}'.format(row['~label'], row['~id']))
+        neptune_client.upsert_node(
+            g=g,
+            node_id=row['~id'],
+            node_label=row['~label'],
+            node_properties=node_properties
         )
 
     def upsert_edge_row(self, row):
-        create_query = "V('{from_node_id}').addE('{label}').to(V('{to_node_id}')).property('id', '{edge_id}'".format(
-            from_node_id=row['~from'],
-            label=row['~label'],
-            to_node_id=row['~to'],
-            edge_id=row['~id']
+        auth_dict = {
+            'aws_access_key_id': self.aws_access_key,
+            'aws_secret_access_key': self.aws_secret_key,
+            'service_region': self.aws_region
+        }
+        g = neptune_client.get_graph(
+            host=self.neptune_host,
+            password=auth_dict,
         )
-        property_portion = ''
-        for key, value in row.items():
-            key_split = key.split(':')
-            key = key_split.split(':')[0]
-            value_type = key_split.split(':')[1]
-
-            if value_type == "String":
-                value = "'{value}'".format(value=value)
-
-            if key not in ['~id', '~from', '~to', '~label']:
-                property_portion = property_portion + ".property('{key}', {value})".format(
-                    key=key,
-                    value=value
-                )
-        gremlin_query = """
-            g.V('{from_node_id}').outE('{label}').hasId('{edge_id}').fold().coalesce(unfold(), {create_query}){property_portion}
-        """.format(
-            from_node_id=row['~from'],
-            label=row['~label'],
+        edge_properties = {
+            key: value
+            for key, value in row.items()
+            if key not in ['~id', '~label', '~to', '~from']
+        }
+        print('Upserting {} {}'.format(row['~label'], row['~id']))
+        neptune_client.upsert_edge(
+            g=g,
+            start_node_id=row['~from'],
+            end_node_id=row['~to'],
             edge_id=row['~id'],
-            create_query=create_query,
-            property_portion=property_portion
-        )
-        neptune_client.query_with_gremlin(
-            neptune_endpoint=self.neptune_endpoint,
-            neptune_port=self.neptune_port,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            secret_key=self.aws_secret_key,
-            gremlin_query=gremlin_query
+            edge_label=row['~label'],
+            edge_properties=edge_properties
         )
 
     def get_scope(self):

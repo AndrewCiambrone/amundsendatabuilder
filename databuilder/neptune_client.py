@@ -126,7 +126,7 @@ def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str 
         return traversal().withRemote(DriverRemoteConnection(**driver_remote_connection_options))
 
 
-def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_location, region, access_key, secret_key):
+def make_bulk_upload_request(neptune_host, bucket, s3_folder_location, region, access_key, secret_key):
     # type: (str, str, str, str, str, str, str) -> str
     s3_source = "s3://{bucket}/{s3_folder_location}".format(
         bucket=bucket,
@@ -139,7 +139,6 @@ def make_bulk_upload_request(neptune_endpoint, neptune_port, bucket, s3_folder_l
         "accessKey": access_key,
         "secretKey": secret_key
     }
-    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
     response_json = _make_signed_request(
         method='POST',
         host=neptune_host,

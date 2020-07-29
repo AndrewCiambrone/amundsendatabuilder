@@ -20,8 +20,7 @@ class NeptuneCSVPublisher(Publisher):
     # Base amundsen data path
     BASE_AMUNDSEN_DATA_PATH = 'base_amundsen_data_path'
 
-    NEPTUNE_ENDPOINT = 'neptune_endpoint'
-    NEPTUNE_PORT = 'neptune_port'
+    NEPTUNE_HOST = 'neptune_host'
 
     # AWS Region
     REGION = 'region'
@@ -44,8 +43,7 @@ class NeptuneCSVPublisher(Publisher):
         self.aws_access_key = conf.get_string(NeptuneCSVPublisher.AWS_ACCESS_KEY)
         self.aws_secret_key = conf.get_string(NeptuneCSVPublisher.AWS_SECRET_KEY)
 
-        self.neptune_endpoint = conf.get_string(NeptuneCSVPublisher.NEPTUNE_ENDPOINT)
-        self.neptune_port = conf.get_int(NeptuneCSVPublisher.NEPTUNE_PORT)
+        self.neptune_host = conf.get_string(NeptuneCSVPublisher.NEPTUNE_HOST)
 
     def publish_impl(self):
         datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -55,8 +53,7 @@ class NeptuneCSVPublisher(Publisher):
         )
         self.upload_files(s3_folder_location)
         bulk_upload_id = neptune_client.make_bulk_upload_request(
-            neptune_endpoint=self.neptune_endpoint,
-            neptune_port=self.neptune_port,
+            neptune_host=self.neptune_host,
             bucket=self.bucket_name,
             s3_folder_location=s3_folder_location,
             region=self.aws_region,

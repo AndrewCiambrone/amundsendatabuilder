@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import requests
-from typing import List,Dict, Any
+from typing import List, Dict, Any
 
 # WIP not being used for anything yet
 class LookerClient:

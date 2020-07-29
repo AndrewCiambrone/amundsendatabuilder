@@ -1,6 +1,7 @@
 import datetime
 
 import os
+import time
 from os import listdir
 from os.path import isfile, join
 
@@ -61,6 +62,24 @@ class NeptuneCSVPublisher(Publisher):
             secret_key=self.aws_secret_key
         )
         print(bulk_upload_id)
+        is_complete, status = neptune_client.is_bulk_status_job_done(
+            neptune_host=self.neptune_host,
+            load_id=bulk_upload_id,
+            region=self.aws_region,
+            access_key=self.aws_access_key,
+            secret_key=self.aws_secret_key
+        )
+        while not is_complete:
+            time.sleep(5)
+            is_complete, status = neptune_client.is_bulk_status_job_done(
+                neptune_host=self.neptune_host,
+                load_id=bulk_upload_id,
+                region=self.aws_region,
+                access_key=self.aws_access_key,
+                secret_key=self.aws_secret_key
+            )
+
+        print(status)
 
     def upload_files(self, s3_folder_location):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

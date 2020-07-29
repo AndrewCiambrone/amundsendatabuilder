@@ -4,6 +4,7 @@ from datetime import datetime
 import urllib
 import os
 import json
+import time
 from typing import Optional, Dict, Any, Union, Mapping
 from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTransport, WebsocketClientTransport
 from gremlin_python.driver.driver_remote_connection import \
@@ -127,7 +128,7 @@ def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str 
 
 
 def make_bulk_upload_request(neptune_host, bucket, s3_folder_location, region, access_key, secret_key):
-    # type: (str, str, str, str, str, str, str) -> str
+    # type: (str, str, str, str, str, str) -> str
     s3_source = "s3://{bucket}/{s3_folder_location}".format(
         bucket=bucket,
         s3_folder_location=s3_folder_location
@@ -151,9 +152,31 @@ def make_bulk_upload_request(neptune_host, bucket, s3_folder_location, region, a
     return response_json.get('payload', {}).get('loadId')
 
 
-def query_with_gremlin(neptune_endpoint, neptune_port, region, access_key, secret_key, gremlin_query):
-    # type: (str, str, str, str, str, str, str) -> Dict
-    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
+def is_bulk_status_job_done(neptune_host, load_id, region, access_key, secret_key):
+    status_response = get_status_on_bulk_loader(neptune_host, load_id, region, access_key, secret_key)
+    status = status_response['payload']['overallStatus']['status']
+    return status != 'LOAD_IN_PROGRESS', status
+
+
+def get_status_on_bulk_loader(neptune_host, load_id, region, access_key, secret_key):
+    query_params = {
+        'loadId': load_id
+    }
+    response_json = _make_signed_request(
+        method='GET',
+        host=neptune_host,
+        endpoint='/loader',
+        aws_access_key=access_key,
+        aws_secret_key=secret_key,
+        aws_region=region,
+        query_params=query_params
+    )
+
+    return response_json
+
+
+def query_with_gremlin(neptune_host, region, access_key, secret_key, gremlin_query):
+    # type: (str, str, str, str, str, str) -> Dict
     query_params = {'gremlin': gremlin_query}
     response_json = _make_signed_request(
         method='GET',

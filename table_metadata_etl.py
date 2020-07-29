@@ -41,7 +41,7 @@ def create_redshift_extraction_job():
     aws_zone = os.getenv("AWS_ZONE")
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
-    neptune_host = "{}:{}/gremlin".format(neptune_endpoint, neptune_port)
+    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
 
 
     where_clause_suffix = textwrap.dedent("""

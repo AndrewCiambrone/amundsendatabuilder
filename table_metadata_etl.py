@@ -4,6 +4,7 @@ import uuid
 from elasticsearch import Elasticsearch
 from pyhocon import ConfigFactory
 from sqlalchemy.ext.declarative import declarative_base
+from argparse import ArgumentParser
 
 from databuilder.extractor.neptune_extractor import NeptuneExtractor
 from databuilder.transformer.base_transformer import NoopTransformer
@@ -29,7 +30,7 @@ def connection_string():
     return "postgresql://%s:%s@%s:%s/%s" % (user, password, host, port, db)
 
 
-def create_redshift_extraction_job():
+def create_redshift_extraction_job(schema="public"):
 
     tmp_folder = '/var/tmp/amundsen/table_metadata'
     node_files_folder = '{tmp_folder}/nodes/'.format(tmp_folder=tmp_folder)
@@ -45,8 +46,8 @@ def create_redshift_extraction_job():
 
 
     where_clause_suffix = textwrap.dedent("""
-        where table_schema = 'public'
-    """)
+        where table_schema = '{schema}'
+    """.format(schema=schema))
 
     job_config = ConfigFactory.from_dict({
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
@@ -131,8 +132,8 @@ def create_elastic_search_publisher_job():
     return job
 
 
-def main():
-    redshift_job = create_redshift_extraction_job()
+def main(schema):
+    redshift_job = create_redshift_extraction_job(schema)
     redshift_job.launch()
 
     elastic_job = create_elastic_search_publisher_job()
@@ -140,4 +141,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument(
+        "--schema", help="Name of schema we are collecting table info from", dest="schema"
+    )
+    args = arg_parser.parse_args()
+    schema_name = args.schema
+    main(schema_name)

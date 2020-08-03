@@ -36,6 +36,8 @@ def create_redshift_extraction_job():
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
 
+    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
+
     job_config = ConfigFactory.from_dict({
         'extractor.postgres_users.{}'.format(PostgresUserExtractor.SQL_STATEMENT_KEY): users_sql,
         'extractor.postgres_users.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
@@ -50,8 +52,7 @@ def create_redshift_extraction_job():
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_ENDPOINT): neptune_endpoint,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_PORT): neptune_port,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_HOST): neptune_host,
     })
     job = DefaultJob(
         conf=job_config,

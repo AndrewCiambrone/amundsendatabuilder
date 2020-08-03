@@ -20,7 +20,7 @@ class GithubClient:
     def get_all_file_urls_in_directory(self, repo_name, directory):
         # type: (str, str) -> List[str]
         try:
-            return self._get_all_file_urls_in_directory(directory)
+            return self._get_all_file_urls_in_directory(repo_name, directory)
         except Exception as e:
             # handle unknown exception
             pass
@@ -41,7 +41,6 @@ class GithubClient:
         )
         response_json = response.json()
         for file_object in response_json:
-
             if _is_file_object_a_directory(file_object):
                 file_object_path = file_object['path']
                 subdirectory_files = self._get_all_file_urls_in_directory(repo_name, file_object_path)
@@ -65,6 +64,7 @@ def _is_file_object_a_directory(file_object):
     # type: (Dict[str, Any]) -> bool
     file_object_type = file_object['type']
     return file_object_type == 'dir'
+
 
 def _is_file_object_a_file(file_object):
     # type: (Dict[str, Any]) -> bool

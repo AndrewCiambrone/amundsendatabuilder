@@ -1,6 +1,6 @@
 import logging
 import importlib
-from typing import Iterator, Any  # noqa: F401
+from typing import Iterator, Any, Union  # noqa: F401
 
 from pyhocon import ConfigTree  # noqa: F401
 
@@ -37,6 +37,9 @@ class GithubFileExtractor(Extractor):
             github_access_token=self.github_access_token
         )
 
+        self._extract_iter = None  # type: Union[None, Iterator]
+        self.file_urls = None
+
     def extract(self):
         # type: () -> Any
 
@@ -45,17 +48,26 @@ class GithubFileExtractor(Extractor):
         returning.
         :return:
         """
-        file_urls = self._client.get_all_file_urls_in_directory()
-
-        if not self._iterator:
-            self._iterator = self._restapi_query.execute()
+        if not self._extract_iter:
+            self._extract_iter = self._get_extract_iter()
 
         try:
-            record = next(self._iterator)
+            record = next(self._get_extract_iter())
         except StopIteration:
             return None
 
         return record
+
+    def _get_extract_iter(self):
+        if not self.file_urls:
+            self.file_urls = self._client.get_all_file_urls_in_directory(
+                self.repo_name,
+                self.repo_directory
+            )
+
+        for file_url in self.file_urls:
+            file_contents = self._client.get_file_contents_from_url(file_url)
+            yield file_contents
 
     def get_scope(self):
         # type: () -> str

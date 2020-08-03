@@ -12,7 +12,7 @@ from databuilder.github_client import GithubClient
 LOGGER = logging.getLogger(__name__)
 
 
-class GithubAPIFileExtractor(Extractor):
+class GithubFileExtractor(Extractor):
     """
     An Extractor that calls on github to extract files
     """
@@ -20,15 +20,17 @@ class GithubAPIFileExtractor(Extractor):
     GITHUB_ORG_NAME = 'github_org_name'
     GITHUB_USER_NAME = 'github_user_name'
     GITHUB_ACCESS_TOKEN = 'github_access_token'
+    REPO_NAME = 'repo_name'
     REPO_DIRECTORY = 'repo_directory'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
         self._iterator = None  # type: Iterator[Dict[str, Any]]
-        self.github_org_name = conf.get(self.GITHUB_ORG_NAME)
-        self.github_user_name = conf.get(self.GITHUB_USER_NAME)
-        self.github_access_token = conf.get(self.GITHUB_ACCESS_TOKEN)
-        self.repo_directory = conf.get(self.REPO_DIRECTORY)
+        self.github_org_name = conf.get_string(self.GITHUB_ORG_NAME)
+        self.github_user_name = conf.get_string(self.GITHUB_USER_NAME)
+        self.github_access_token = conf.get_string(self.GITHUB_ACCESS_TOKEN)
+        self.repo_directory = conf.get_string(self.REPO_DIRECTORY)
+        self.repo_name = conf.get_string(self.REPO_NAME)
         self._client = GithubClient(
             organization_name=self.github_org_name,
             github_username=self.github_user_name,
@@ -43,6 +45,7 @@ class GithubAPIFileExtractor(Extractor):
         returning.
         :return:
         """
+        file_urls = self._client.get_all_file_urls_in_directory()
 
         if not self._iterator:
             self._iterator = self._restapi_query.execute()
@@ -56,5 +59,4 @@ class GithubAPIFileExtractor(Extractor):
 
     def get_scope(self):
         # type: () -> str
-
-        return 'extractor.restapi'
+        return 'extractor.github_file_extractor'

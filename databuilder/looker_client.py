@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import requests
 from typing import List, Dict, Any
 
+
 # WIP not being used for anything yet
 class LookerClient:
     def __init__(self, base_url, client_id, client_secret):

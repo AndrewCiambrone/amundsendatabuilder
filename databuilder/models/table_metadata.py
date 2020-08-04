@@ -99,7 +99,7 @@ class DescriptionMetadata:
 
     @staticmethod
     def create_description_metadata(text, source=DEFAULT_SOURCE):
-        # type: (Union[None,str], str) -> DescriptionMetadata
+        # type: (Union[None, str], str) -> DescriptionMetadata
 
         # We do not want to create a node if there is no description text!
         if text is None:

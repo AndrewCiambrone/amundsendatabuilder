@@ -7,7 +7,7 @@ from typing import Iterator, Union, Dict, Any  # noqa: F401
 from databuilder import Scoped
 from databuilder.extractor.base_extractor import Extractor
 from databuilder.extractor.restapi.github_file_extractor import GithubFileExtractor
-from databuilder.models.table_metadata import DescriptionMetadata
+from databuilder.models.table_metadata import DescriptionMetadata, ColumnMetadata
 import lkml
 
 LOGGER = logging.getLogger(__name__)
@@ -18,14 +18,20 @@ class LookerViewDescriptionsExtractor(Extractor):
     Extracts Looker Descriptions using GithubFileExtractor
     """
 
+    METADATA_SOURCE = 'looker'
+
     # CONFIG KEYS
+    LOOKER_TABLE_SOURCE_DATABASE = 'LOOKER_TABLE_SOURCE_DATABASE'
+    LOOKER_TABLE_SOURCE_CLUSTER = 'LOOKER_TABLE_SOURCE_CLUSTER'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
-        self.sql_stmt = self.sql_stmt.replace('%', '%%')
 
         self._github_file_extractor = GithubFileExtractor()
         github_file_extractor_conf = Scoped.get_scoped_conf(conf, self._github_file_extractor.get_scope())
+
+        self.source_database = conf.get_string(self.LOOKER_TABLE_SOURCE_DATABASE)
+        self.source_cluster = conf.get_string(self.LOOKER_TABLE_SOURCE_CLUSTER)
 
         self._github_file_extractor.init(github_file_extractor_conf)
         self._extract_iter = None  # type: Union[None, Iterator]
@@ -50,6 +56,17 @@ class LookerViewDescriptionsExtractor(Extractor):
         """
         for file_contents in self._get_raw_extract_iter():
             model = lkml.load(file_contents)
+            for view in model.get('views', []):
+                sql_table_name = view['sql_table_name']
+                schema = sql_table_name.split('.')[0]
+                table_name = sql_table_name.split('.')[1]
+                for dimension in view.get('dimensions', []):
+                    column_name = dimension['name']
+                    column_description = dimension['description']
+                    description_metadata = DescriptionMetadata(
+                        text=column_description,
+                        source=self.METADATA_SOURCE
+                    )
             yield model
 
     def _get_raw_extract_iter(self):

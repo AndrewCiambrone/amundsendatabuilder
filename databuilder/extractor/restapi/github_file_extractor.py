@@ -1,6 +1,7 @@
 import logging
 import importlib
 from typing import Iterator, Any, Union  # noqa: F401
+from urllib.parse import urlparse
 
 from pyhocon import ConfigTree  # noqa: F401
 
@@ -38,7 +39,7 @@ class GithubFileExtractor(Extractor):
             github_access_token=self.github_access_token
         )
 
-        self.expected_file_extensions = conf.get_list(self.expected_file_types)
+        self.expected_file_extensions = conf.get_list(self.EXPECTED_FILE_EXTENSIONS)
 
         self._extract_iter = None  # type: Union[None, Iterator]
         self.file_urls = None
@@ -69,15 +70,17 @@ class GithubFileExtractor(Extractor):
             )
 
         for file_url in self.file_urls:
-            file_contents = self._client.get_file_contents_from_url(file_url)
-            if not self.wanted_file_type(file_contents):
+            if not self.wanted_file_type(file_url):
                 continue
+            file_contents = self._client.get_file_contents_from_url(file_url)
+
             yield file_contents
 
     def get_scope(self):
         # type: () -> str
         return 'extractor.github_file_extractor'
 
-    def wanted_file_type(self, file_contents):
-        return True
+    def wanted_file_type(self, file_url):
+        file_path = urlparse(file_url).path
+        return file_path.endswith(tuple(self.expected_file_extensions))
 

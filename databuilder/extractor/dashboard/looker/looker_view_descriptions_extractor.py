@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 class LookerViewDescriptionsExtractor(Extractor):
     """
-    Extracts Postgres users using SQLAlchemyExtractor
+    Extracts Looker Descriptions using GithubFileExtractor
     """
 
     # CONFIG KEYS

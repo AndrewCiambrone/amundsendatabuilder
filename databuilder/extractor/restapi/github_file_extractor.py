@@ -22,6 +22,7 @@ class GithubFileExtractor(Extractor):
     GITHUB_ACCESS_TOKEN = 'github_access_token'
     REPO_NAME = 'repo_name'
     REPO_DIRECTORY = 'repo_directory'
+    EXPECTED_FILE_EXTENSIONS = 'expected_file_extensions'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
@@ -36,6 +37,8 @@ class GithubFileExtractor(Extractor):
             github_username=self.github_user_name,
             github_access_token=self.github_access_token
         )
+
+        self.expected_file_extensions = conf.get_list(self.expected_file_types)
 
         self._extract_iter = None  # type: Union[None, Iterator]
         self.file_urls = None
@@ -67,8 +70,14 @@ class GithubFileExtractor(Extractor):
 
         for file_url in self.file_urls:
             file_contents = self._client.get_file_contents_from_url(file_url)
+            if not self.wanted_file_type(file_contents):
+                continue
             yield file_contents
 
     def get_scope(self):
         # type: () -> str
         return 'extractor.github_file_extractor'
+
+    def wanted_file_type(self, file_contents):
+        return True
+

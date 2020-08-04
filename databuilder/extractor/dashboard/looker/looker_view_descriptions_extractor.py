@@ -50,7 +50,7 @@ class LookerViewDescriptionsExtractor(Extractor):
         return 'extractor.looker_view_descriptions_extractor'
 
     def _get_extract_iter(self):
-        # type: () -> Iterator[User]
+        # type: () -> Iterator[DescriptionMetadata]
         """
         :return:
         """
@@ -63,11 +63,18 @@ class LookerViewDescriptionsExtractor(Extractor):
                 for dimension in view.get('dimensions', []):
                     column_name = dimension['name']
                     column_description = dimension['description']
-                    description_metadata = DescriptionMetadata(
-                        text=column_description,
-                        source=self.METADATA_SOURCE
+                    column_key = ColumnMetadata.COLUMN_KEY_FORMAT.format(
+                        db=self.source_database,
+                        cluster=self.source_cluster,
+                        schema=schema,
+                        tbl=table_name,
+                        col=column_name
                     )
-            yield model
+                    yield DescriptionMetadata(
+                        text=column_description,
+                        source=self.METADATA_SOURCE,
+                        description_owner_key=column_key
+                    )
 
     def _get_raw_extract_iter(self):
         # type: () -> Iterator[Any]

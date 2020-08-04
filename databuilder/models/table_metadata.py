@@ -83,7 +83,8 @@ class DescriptionMetadata:
 
     def __init__(self,
                  text,  # type: Union[None, str]
-                 source=DEFAULT_SOURCE  # type: str
+                 source=DEFAULT_SOURCE,  # type: str
+                 description_owner_key=None, #type: Union[None, str]
                  ):
         """
         :param source: The unique source of what is populating this description.
@@ -91,6 +92,7 @@ class DescriptionMetadata:
         """
         self._source = source
         self._text = text
+        self._description_owner_key = description_owner_key
         #  There are so many dependencies on Description node, that it is probably easier to just separate the rest out.
         if (self._source == self.DEFAULT_SOURCE):
             self._label = self.DESCRIPTION_NODE_LABEL

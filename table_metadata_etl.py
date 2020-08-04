@@ -133,6 +133,7 @@ def create_elastic_search_publisher_job():
 
 
 def main(schema):
+    assert schema
     redshift_job = create_redshift_extraction_job(schema)
     redshift_job.launch()
 

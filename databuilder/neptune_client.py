@@ -138,7 +138,8 @@ def make_bulk_upload_request(neptune_host, bucket, s3_folder_location, region, a
         "format": "csv",
         "region": region,
         "accessKey": access_key,
-        "secretKey": secret_key
+        "secretKey": secret_key,
+        "updateSingleCardinalityProperties": "TRUE"
     }
     response_json = _make_signed_request(
         method='POST',
@@ -160,7 +161,9 @@ def is_bulk_status_job_done(neptune_host, load_id, region, access_key, secret_ke
 
 def get_status_on_bulk_loader(neptune_host, load_id, region, access_key, secret_key):
     query_params = {
-        'loadId': load_id
+        'loadId': load_id,
+        'errors': True,
+        'details': True
     }
     response_json = _make_signed_request(
         method='GET',

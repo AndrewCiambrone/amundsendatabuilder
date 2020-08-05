@@ -67,12 +67,12 @@ def get_table_info_for_search(g):
         by(__.out('TABLE_OF').out('SCHEMA_OF').out('CLUSTER_OF').values('name')). \
         by(__.out('TABLE_OF').out('SCHEMA_OF').values('name')). \
         by(__.out('TABLE_OF').values('name')). \
-        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION_OF').values('description'), __.constant(''))). \
+        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION').values('description'), __.constant(''))). \
         by('name'). \
         by(T.id). \
         by(__.coalesce(__.out('DESCRIPTION').values('description'), __.constant(''))). \
         by(__.out('COLUMN').values('name').fold()). \
-        by(__.out('COLUMN').out('DESCRIPTION').fold()). \
+        by(__.out('COLUMN').out('DESCRIPTION').values('description').fold()). \
         by(__.coalesce(__.outE('READ_BY').values('read_count'), __.constant(0)).sum()). \
         by(__.outE('READ_BY').count()). \
         by(__.inE('TAG').outV().id().fold()). \

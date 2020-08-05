@@ -11,7 +11,7 @@ from gremlin_python.driver.driver_remote_connection import \
     DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
 from gremlin_python.process.graph_traversal import GraphTraversalSource
-from gremlin_python.process.traversal import T, Order, gt
+from gremlin_python.process.traversal import T, Order, gt, Cardinality
 from gremlin_python.process.graph_traversal import __
 
 g = None
@@ -40,7 +40,7 @@ def upsert_node(g, node_id, node_label, node_properties):
         if not value:
             continue
         key = key.split(':')[0]
-        node_traversal = node_traversal.property(key, value)
+        node_traversal = node_traversal.property(Cardinality.single, key, value)
 
     node_traversal.next()
 
@@ -54,7 +54,7 @@ def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_propert
         key_split = key.split(':')
         key = key_split[0]
         value_type = key_split[1]
-        if value_type == "Long":
+        if "Long" in value_type:
             value = int(value)
         edge_traversal = edge_traversal.property(key, value)
 

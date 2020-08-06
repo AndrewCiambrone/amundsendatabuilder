@@ -55,14 +55,27 @@ class LookerViewDescriptionsExtractor(Extractor):
         :return:
         """
         for file_contents in self._get_raw_extract_iter():
-            model = lkml.load(file_contents)
+            try:
+                model = lkml.load(file_contents)
+            except Exception as e:
+                print(e)
+                continue
+
             for view in model.get('views', []):
-                sql_table_name = view['sql_table_name']
+                sql_table_name = view.get('sql_table_name')
+                if not sql_table_name:
+                    continue
+                sql_table_name_split = sql_table_name.split('.')
+                if len(sql_table_name_split) != 2:
+                    print("could not parse {}".format(sql_table_name))
+                    continue
                 schema = sql_table_name.split('.')[0]
                 table_name = sql_table_name.split('.')[1]
                 for dimension in view.get('dimensions', []):
                     column_name = dimension['name']
-                    column_description = dimension['description']
+                    column_description = dimension.get('description')
+                    if not column_description:
+                        continue
                     column_key = ColumnMetadata.COLUMN_KEY_FORMAT.format(
                         db=self.source_database,
                         cluster=self.source_cluster,
@@ -82,7 +95,10 @@ class LookerViewDescriptionsExtractor(Extractor):
         Provides iterator of result row from the github file
         :return:
         """
-        file_contents = self._github_file_extractor.extract()
-        while file_contents:
-            yield file_contents
-            file_contents = self._github_file_extractor.extract()
+        try:
+            file_contents = next(self._github_file_extractor.extract())
+            while file_contents:
+                yield file_contents
+                file_contents = next(self._github_file_extractor.extract())
+        except StopIteration:
+            return None

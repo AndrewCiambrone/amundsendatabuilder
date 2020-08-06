@@ -92,7 +92,7 @@ class DescriptionMetadata:
         """
         self._source = source
         self._text = text
-        self._description_owner_key = description_owner_key
+        self.description_owner_key = description_owner_key
         #  There are so many dependencies on Description node, that it is probably easier to just separate the rest out.
         if (self._source == self.DEFAULT_SOURCE):
             self._label = self.DESCRIPTION_NODE_LABEL

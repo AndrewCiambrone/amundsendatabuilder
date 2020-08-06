@@ -57,7 +57,7 @@ class GithubClient:
             headers=self._request_headers,
             auth=self._request_auth
         )
-        return response.content
+        return response.content.decode(response.encoding)
 
 
 def _is_file_object_a_directory(file_object):

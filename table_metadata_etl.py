@@ -34,7 +34,7 @@ def connection_string():
     return "postgresql://%s:%s@%s:%s/%s" % (user, password, host, port, db)
 
 
-def create_redshift_extraction_job(schema="public"):
+def create_redshift_extraction_job_with_looker(schema="public"):
 
     tmp_folder = '/var/tmp/amundsen/table_metadata'
     node_files_folder = '{tmp_folder}/nodes/'.format(tmp_folder=tmp_folder)
@@ -66,8 +66,8 @@ def create_redshift_extraction_job(schema="public"):
         'extractor.looker_view_descriptions_extractor.extractor.github_file_extractor.{}'.format(GithubFileExtractor.GITHUB_ACCESS_TOKEN): github_access_token,
         'extractor.looker_view_descriptions_extractor.extractor.github_file_extractor.{}'.format(GithubFileExtractor.GITHUB_ORG_NAME): github_org,
         'extractor.looker_view_descriptions_extractor.extractor.github_file_extractor.{}'.format(GithubFileExtractor.EXPECTED_FILE_EXTENSIONS): ['.view.lkml'],
-        'extractor.looker_view_descriptions_extractor'.format(LookerViewDescriptionsExtractor.LOOKER_TABLE_SOURCE_CLUSTER): os.getenv('DW_DB'),
-        'extractor.looker_view_descriptions_extractor'.format(LookerViewDescriptionsExtractor.LOOKER_TABLE_SOURCE_DATABASE): 'postgres',
+        'extractor.looker_view_descriptions_extractor.{}'.format(LookerViewDescriptionsExtractor.LOOKER_TABLE_SOURCE_CLUSTER): os.getenv('DW_DB'),
+        'extractor.looker_view_descriptions_extractor.{}'.format(LookerViewDescriptionsExtractor.LOOKER_TABLE_SOURCE_DATABASE): 'postgres',
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.USE_CATALOG_AS_CLUSTER_NAME): True,
         'extractor.postgres_metadata.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
@@ -84,7 +84,7 @@ def create_redshift_extraction_job(schema="public"):
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_HOST): neptune_host
     })
-    get_description_metadata_owner_key = lambda description: [description.description_owner_key]
+    get_description_metadata_owner_key = lambda description: description.description_owner_key
     get_description_metadata_description = lambda description: description._text
     get_description_metadata_source = lambda description: description._source
     get_column_keys_on_table_metadata = lambda table_metadata: [table_metadata._get_col_key(column) for column in table_metadata.columns]
@@ -92,27 +92,45 @@ def create_redshift_extraction_job(schema="public"):
     def get_column_description(table_metadata, column_id):
         # type: (TableMetadata, str) -> str
         column = [column for column in table_metadata.columns if table_metadata._get_col_key(column) == column_id][0]
+        if column.description is None:
+            return None
         return column.description._text
 
     def get_column_description_source(table_metadata, column_id):
         # type: (TableMetadata, str) -> str
         column = [column for column in table_metadata.columns if table_metadata._get_col_key(column) == column_id][0]
+        if column.description is None:
+            return None
         return column.description._source
 
     def set_column_description(table_metadata, column_id, description):
         # type: (TableMetadata, str) -> str
         column = [column for column in table_metadata.columns if table_metadata._get_col_key(column) == column_id][0]
-        column.description._text = description
+        if column.description is None:
+            column.description = DescriptionMetadata(
+                source="looker",
+                text=description,
+                description_owner_key=table_metadata._get_col_key(column)
+            )
+        else:
+            column.description._text = description
 
     def set_column_description_source(table_metadata, column_id, source):
         # type: (TableMetadata, str) -> str
         column = [column for column in table_metadata.columns if table_metadata._get_col_key(column) == column_id][0]
-        column.description._source = source
+        if column.description is None:
+            column.description = DescriptionMetadata(
+                source="looker",
+                text=None,
+                description_owner_key=table_metadata._get_col_key(column)
+            )
+        else:
+            column.description._source = source
 
 
     child_extractor_wrappers = [
         ChildMergeTaskExtractorWrapper(
-            extractor=LookerViewDescriptionsExtractor,
+            extractor=LookerViewDescriptionsExtractor(),
             key_mapper=get_description_metadata_owner_key,
             property_name_to_getter_mappers={
                 'description': get_description_metadata_description,
@@ -133,11 +151,57 @@ def create_redshift_extraction_job(schema="public"):
     job = DefaultJob(
         conf=job_config,
         task=MergeTask(
-            parent_extractor=PostgresMetadataExtractor,
+            parent_extractor=PostgresMetadataExtractor(),
             parent_record_identifiers=get_column_keys_on_table_metadata,
             parent_record_property_name_getters=parent_record_property_name_getters,
             parent_record_property_name_setters=parent_record_property_name_setters,
             child_extractor_wrappers=child_extractor_wrappers,
+            loader=FSNeptuneCSVLoader()
+        ),
+        publisher=NeptuneCSVPublisher()
+    )
+    return job
+
+
+def create_redshift_extraction_job(schema="public"):
+    tmp_folder = '/var/tmp/amundsen/table_metadata'
+    node_files_folder = '{tmp_folder}/nodes/'.format(tmp_folder=tmp_folder)
+    relationship_files_folder = '{tmp_folder}/relationships/'.format(tmp_folder=tmp_folder)
+    s3_bucket = os.getenv('S3_BUCKET')
+    s3_directory = "amundsen"
+    access_key = os.getenv('AWS_KEY')
+    access_secret = os.getenv('AWS_SECRET_KEY')
+    aws_zone = os.getenv("AWS_ZONE")
+    neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
+    neptune_port = os.getenv("NEPTUNE_PORT")
+    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
+
+    where_clause_suffix = textwrap.dedent("""
+        where table_schema = '{schema}'
+    """.format(schema=schema))
+
+    job_config = ConfigFactory.from_dict({
+        'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
+        'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.USE_CATALOG_AS_CLUSTER_NAME): True,
+        'extractor.postgres_metadata.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.NODE_DIR_PATH): node_files_folder,
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False,
+        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.FORCE_CREATE_DIR): True,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NODE_FILES_DIR): node_files_folder,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.RELATION_FILES_DIR): relationship_files_folder,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BUCKET_NAME): s3_bucket,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_HOST): neptune_host
+    })
+
+    job = DefaultJob(
+        conf=job_config,
+        task=DefaultTask(
+            extractor=PostgresMetadataExtractor(),
             loader=FSNeptuneCSVLoader()
         ),
         publisher=NeptuneCSVPublisher()
@@ -201,8 +265,12 @@ def create_elastic_search_publisher_job():
 
 
 def main(schema):
+    # assert schema
+    # redshift_job = create_redshift_extraction_job(schema)
+    # redshift_job.launch()
+
     assert schema
-    redshift_job = create_redshift_extraction_job(schema)
+    redshift_job = create_redshift_extraction_job_with_looker(schema)
     redshift_job.launch()
 
     elastic_job = create_elastic_search_publisher_job()

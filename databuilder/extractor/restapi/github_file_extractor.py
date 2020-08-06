@@ -56,11 +56,11 @@ class GithubFileExtractor(Extractor):
             self._extract_iter = self._get_extract_iter()
 
         try:
-            record = next(self._get_extract_iter())
+            file_url = next(self._get_extract_iter())
+            file_contents = self._client.get_file_contents_from_url(file_url)
+            yield file_contents
         except StopIteration:
             return None
-
-        return record
 
     def _get_extract_iter(self):
         if not self.file_urls:
@@ -68,13 +68,9 @@ class GithubFileExtractor(Extractor):
                 self.repo_name,
                 self.repo_directory
             )
+            self.file_urls = iter([file_url for file_url in self.file_urls if self.wanted_file_type(file_url)])
 
-        for file_url in self.file_urls:
-            if not self.wanted_file_type(file_url):
-                continue
-            file_contents = self._client.get_file_contents_from_url(file_url)
-
-            yield file_contents
+        return self.file_urls
 
     def get_scope(self):
         # type: () -> str

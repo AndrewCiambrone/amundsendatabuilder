@@ -76,6 +76,7 @@ class MergeTask(Task):
         self.parent_record_property_name_getters = parent_record_property_name_getters
         self.parent_record_property_name_setters = parent_record_property_name_setters
         self.child_extractor_wrappers = child_extractor_wrappers
+        self.combined_child_extractors_result = {}
         self.transformer = transformer
         self.loader = loader
 
@@ -114,6 +115,7 @@ class MergeTask(Task):
             record = self.parent_extractor.extract()
             count = 1
             while record:
+                self.merge_record_with_children(record)
                 record = self.transformer.transform(record)
                 if not record:
                     record = self.parent_extractor.extract()
@@ -128,38 +130,45 @@ class MergeTask(Task):
             self._closer.close()
 
     def merge_record_with_children(self, record):
-        record_keys = self.parent_record_identifiers(record)
-        child_extractor_value_list = list(chain(*[
-            [
-                (record_id, child_record) for record_id, child_record in child_extractor.results.items()
-                if record_id in record_keys
-            ]
-            for child_extractor in self.child_extractor_wrappers
-            if set(record_keys) & set(child_extractor.results.keys())
-        ]))
-        child_extractor_values = {}
-        for (record_id, child_value) in child_extractor_value_list:
-            child_extractor_values.update(child_extractor_value)
+        record_keys = set(self.parent_record_identifiers(record))
+        filtered_child_extractor_results = [
+            (record_id, record_values) for record_id, record_values in self.combined_child_extractors_result.items()
+            if record_id in record_keys
+        ]
 
-        for property_name, property_value in child_extractor_values.items():
-            record_setter = self.parent_record_property_name_setters.get(property_name)
-            record_getter = self.parent_record_property_name_getters.get(property_name)
-            if record_setter is None:
-                LOGGER.info("Extractored {} but a setter was not found parent mapper. SKIPPING".format(property_name))
-                continue
+        for record_id, record_values in filtered_child_extractor_results:
+            for property_name, property_value in record_values.items():
+                record_setter = self.parent_record_property_name_setters.get(property_name)
+                record_getter = self.parent_record_property_name_getters.get(property_name)
+                if record_setter is None:
+                    LOGGER.info("Extractored {} but a setter was not found parent mapper. SKIPPING".format(property_name))
+                    continue
 
-            if record_getter is None:
-                LOGGER.info("Extractored {} but a getter was not found parent mapper. SKIPPING".format(property_name))
-                continue
+                if record_getter is None:
+                    LOGGER.info("Extractored {} but a getter was not found parent mapper. SKIPPING".format(property_name))
+                    continue
 
-            if record_getter(record) is not None:
-                LOGGER.info("Extractored {} but found it already set on parent. SKIPPING".format(property_name))
-                continue
+                if record_getter(record, record_id) is not None:
+                    LOGGER.info("Extractored {} but found it already set on parent. SKIPPING".format(property_name))
+                    continue
 
-            record_setter(record, property_value)
+                record_setter(record, record_id, property_value)
 
         return record
 
     def _run_child_extractors(self):
         for child_extractor_wrapper in self.child_extractor_wrappers:
             child_extractor_wrapper.run_extraction()
+            merge_dicts(self.combined_child_extractors_result, child_extractor_wrapper.results)
+
+
+def merge_dicts(dict1, dict2):
+    """ Recursively merges dict2 into dict1 """
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        return dict2
+    for k in dict2:
+        if k in dict1:
+            dict1[k] = merge_dicts(dict1[k], dict2[k])
+        else:
+            dict1[k] = dict2[k]
+    return dict1

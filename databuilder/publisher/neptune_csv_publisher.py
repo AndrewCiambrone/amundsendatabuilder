@@ -8,6 +8,7 @@ from os.path import isfile, join
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.utils import s3_client
 from databuilder import neptune_client
+from databuilder.clients.neptune_client import BulkUploaderNeptuneClient
 
 
 class NeptuneCSVPublisher(Publisher):
@@ -28,6 +29,7 @@ class NeptuneCSVPublisher(Publisher):
 
     AWS_ACCESS_KEY = 'aws_access_key'
     AWS_SECRET_KEY = 'aws_secret_key'
+    AWS_SESSION_TOKEN = 'aws_session_token'
 
     def __init__(self):
         # type: () -> None
@@ -43,6 +45,7 @@ class NeptuneCSVPublisher(Publisher):
         self.aws_region = conf.get_string(NeptuneCSVPublisher.REGION)
         self.aws_access_key = conf.get_string(NeptuneCSVPublisher.AWS_ACCESS_KEY)
         self.aws_secret_key = conf.get_string(NeptuneCSVPublisher.AWS_SECRET_KEY)
+        self.aws_session_token = conf.get_string(NeptuneCSVPublisher.AWS_SESSION_TOKEN, default=None)
 
         self.neptune_host = conf.get_string(NeptuneCSVPublisher.NEPTUNE_HOST)
 
@@ -53,30 +56,26 @@ class NeptuneCSVPublisher(Publisher):
             datetime_portion=datetime_portion,
         )
         self.upload_files(s3_folder_location)
-        bulk_upload_id = neptune_client.make_bulk_upload_request(
+        bulk_loader_client = BulkUploaderNeptuneClient(
             neptune_host=self.neptune_host,
+            region=self.aws_region,
+            access_key=self.aws_access_key,
+            access_secret=self.aws_secret_key,
+            session_token=self.aws_session_token
+        )
+
+        bulk_upload_id = bulk_loader_client.make_bulk_upload_request(
             bucket=self.bucket_name,
             s3_folder_location=s3_folder_location,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            secret_key=self.aws_secret_key
         )
-        print(bulk_upload_id)
-        is_complete, status = neptune_client.is_bulk_status_job_done(
-            neptune_host=self.neptune_host,
+
+        is_complete, status = bulk_loader_client.is_bulk_status_job_done(
             load_id=bulk_upload_id,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            secret_key=self.aws_secret_key
         )
         while not is_complete:
             time.sleep(5)
-            is_complete, status = neptune_client.is_bulk_status_job_done(
-                neptune_host=self.neptune_host,
+            is_complete, status = bulk_loader_client.is_bulk_status_job_done(
                 load_id=bulk_upload_id,
-                region=self.aws_region,
-                access_key=self.aws_access_key,
-                secret_key=self.aws_secret_key
             )
 
         print(status)

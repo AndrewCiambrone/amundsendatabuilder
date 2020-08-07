@@ -1,10 +1,3 @@
-import requests
-import hashlib, hmac
-from datetime import datetime
-import urllib
-import os
-import json
-import time
 from typing import Optional, Dict, Any, Union, Mapping
 from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTransport, WebsocketClientTransport
 from gremlin_python.driver.driver_remote_connection import \

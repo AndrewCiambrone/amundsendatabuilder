@@ -1,5 +1,3 @@
-
-from datetime import datetime, timedelta
 import requests
 from requests.auth import HTTPBasicAuth
 from typing import List, Dict, Any
@@ -7,7 +5,7 @@ from typing import List, Dict, Any
 
 class GithubClient:
     def __init__(self, organization_name, github_username, github_access_token):
-        # type: (str, str, str, str) -> None
+        # type: (str, str, str) -> None
         self.organization_name = organization_name
         self.github_username = github_username
         self.github_access_token = github_access_token

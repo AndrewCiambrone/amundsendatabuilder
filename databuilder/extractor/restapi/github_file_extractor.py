@@ -7,7 +7,7 @@ from pyhocon import ConfigTree  # noqa: F401
 
 from databuilder.extractor.base_extractor import Extractor
 from databuilder.rest_api.base_rest_api_query import BaseRestApiQuery  # noqa: F401
-from databuilder.github_client import GithubClient
+from databuilder.clients.github_client import GithubClient
 
 
 LOGGER = logging.getLogger(__name__)

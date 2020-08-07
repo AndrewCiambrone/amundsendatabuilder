@@ -90,6 +90,9 @@ class BulkUploaderNeptuneClient:
             'Authorization': authorization_header
         }
 
+        if self.session_token:
+            request_headers['x-amz-security-token'] = self.session_token
+
         if method == 'POST':
             request_headers['content-type'] = 'application/x-www-form-urlencoded'
             response = requests.post(
@@ -179,4 +182,3 @@ class BulkUploaderNeptuneClient:
     def _sign(key, msg):
         # type: (str, str) -> str
         return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
-

@@ -1,5 +1,4 @@
 import logging
-from collections import namedtuple
 
 from pyhocon import ConfigFactory, ConfigTree  # noqa: F401
 from typing import Iterator, Union, Dict, Any  # noqa: F401

@@ -5,6 +5,7 @@ from elasticsearch import Elasticsearch
 from pyhocon import ConfigFactory
 from sqlalchemy.ext.declarative import declarative_base
 from argparse import ArgumentParser
+import boto3
 
 from databuilder.extractor.neptune_extractor import NeptuneExtractor
 from databuilder.transformer.base_transformer import NoopTransformer
@@ -34,6 +35,21 @@ def connection_string():
     return "postgresql://%s:%s@%s:%s/%s" % (user, password, host, port, db)
 
 
+def get_aws_credential_info():
+    aws_region = os.getenv("AWS_ZONE")
+    session = boto3.Session()
+    aws_creds = session.get_credentials()
+    aws_access_key = aws_creds.access_key
+    aws_access_secret = aws_creds.secret_key
+    aws_token = aws_creds.token
+    return {
+        'aws_access_key_id': aws_access_key,
+        'aws_secret_access_key': aws_access_secret,
+        'aws_session_token': aws_token,
+        'service_region': aws_region
+    }
+
+
 def create_redshift_extraction_job_with_looker(schema="public"):
 
     tmp_folder = '/var/tmp/amundsen/table_metadata'
@@ -41,9 +57,7 @@ def create_redshift_extraction_job_with_looker(schema="public"):
     relationship_files_folder = '{tmp_folder}/relationships/'.format(tmp_folder=tmp_folder)
     s3_bucket = os.getenv('S3_BUCKET')
     s3_directory = "amundsen"
-    access_key = os.getenv('AWS_KEY')
-    access_secret = os.getenv('AWS_SECRET_KEY')
-    aws_zone = os.getenv("AWS_ZONE")
+    aws_creds = get_aws_credential_info()
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
     neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
@@ -80,9 +94,10 @@ def create_redshift_extraction_job_with_looker(schema="public"):
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.RELATION_FILES_DIR): relationship_files_folder,
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BUCKET_NAME): s3_bucket,
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_creds.get('service_region'),
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): aws_creds.get('aws_access_key_id'),
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): aws_creds.get('aws_secret_access_key'),
+        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SESSION_TOKEN): aws_creds.get('aws_session_token'),
         'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_HOST): neptune_host
     })
     get_description_metadata_owner_key = lambda description: description.description_owner_key
@@ -157,52 +172,6 @@ def create_redshift_extraction_job_with_looker(schema="public"):
             parent_record_property_name_getters=parent_record_property_name_getters,
             parent_record_property_name_setters=parent_record_property_name_setters,
             child_extractor_wrappers=child_extractor_wrappers,
-            loader=FSNeptuneCSVLoader()
-        ),
-        publisher=NeptuneCSVPublisher()
-    )
-    return job
-
-
-def create_redshift_extraction_job(schema="public"):
-    tmp_folder = '/var/tmp/amundsen/table_metadata'
-    node_files_folder = '{tmp_folder}/nodes/'.format(tmp_folder=tmp_folder)
-    relationship_files_folder = '{tmp_folder}/relationships/'.format(tmp_folder=tmp_folder)
-    s3_bucket = os.getenv('S3_BUCKET')
-    s3_directory = "amundsen"
-    access_key = os.getenv('AWS_KEY')
-    access_secret = os.getenv('AWS_SECRET_KEY')
-    aws_zone = os.getenv("AWS_ZONE")
-    neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
-    neptune_port = os.getenv("NEPTUNE_PORT")
-    neptune_host = "{}:{}".format(neptune_endpoint, neptune_port)
-
-    where_clause_suffix = textwrap.dedent("""
-        where table_schema = '{schema}'
-    """.format(schema=schema))
-
-    job_config = ConfigFactory.from_dict({
-        'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
-        'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.USE_CATALOG_AS_CLUSTER_NAME): True,
-        'extractor.postgres_metadata.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
-        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.NODE_DIR_PATH): node_files_folder,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.SHOULD_DELETE_CREATED_DIR): False,
-        'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.FORCE_CREATE_DIR): True,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NODE_FILES_DIR): node_files_folder,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.RELATION_FILES_DIR): relationship_files_folder,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BUCKET_NAME): s3_bucket,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.BASE_AMUNDSEN_DATA_PATH): s3_directory,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.REGION): aws_zone,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_ACCESS_KEY): access_key,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.AWS_SECRET_KEY): access_secret,
-        'publisher.neptune_csv_publisher.{}'.format(NeptuneCSVPublisher.NEPTUNE_HOST): neptune_host
-    })
-
-    job = DefaultJob(
-        conf=job_config,
-        task=DefaultTask(
-            extractor=PostgresMetadataExtractor(),
             loader=FSNeptuneCSVLoader()
         ),
         publisher=NeptuneCSVPublisher()

@@ -7,7 +7,6 @@ from os.path import isfile, join
 
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.utils import s3_client
-from databuilder import neptune_client
 from databuilder.clients.neptune_client import BulkUploaderNeptuneClient
 
 

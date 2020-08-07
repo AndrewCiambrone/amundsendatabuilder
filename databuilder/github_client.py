@@ -5,7 +5,6 @@ from requests.auth import HTTPBasicAuth
 from typing import List, Dict, Any
 
 
-# WIP not being used for anything yet
 class GithubClient:
     def __init__(self, organization_name, github_username, github_access_token):
         # type: (str, str, str, str) -> None

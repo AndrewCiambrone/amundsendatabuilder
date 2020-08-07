@@ -167,7 +167,8 @@ class ColumnMetadata:
                  description,  # type: Union[str, None]
                  col_type,  # type: str
                  sort_order,  # type: int
-                 tags=None  # type: Union[List[str], None]
+                 tags=None,  # type: Union[List[str], None],
+                 description_source=None  # type: Union[str, None]
                  ):
         # type: (...) -> None
         """
@@ -178,7 +179,7 @@ class ColumnMetadata:
         :param sort_order:
         """
         self.name = name
-        self.description = DescriptionMetadata.create_description_metadata(source=None,
+        self.description = DescriptionMetadata.create_description_metadata(source=description_source,
                                                                            text=description)
         self.type = col_type
         self.sort_order = sort_order

@@ -70,6 +70,7 @@ def create_redshift_extraction_job_with_looker(schema="public"):
         'extractor.looker_view_descriptions_extractor.{}'.format(LookerViewDescriptionsExtractor.LOOKER_TABLE_SOURCE_DATABASE): 'postgres',
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.WHERE_CLAUSE_SUFFIX_KEY): where_clause_suffix,
         'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.USE_CATALOG_AS_CLUSTER_NAME): True,
+        'extractor.postgres_metadata.{}'.format(PostgresMetadataExtractor.DESCRIPTIONS_SOURCE): "data-warehouse",
         'extractor.postgres_metadata.extractor.sqlalchemy.{}'.format(SQLAlchemyExtractor.CONN_STRING): connection_string(),
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.NODE_DIR_PATH): node_files_folder,
         'loader.filesystem_csv_neptune.{}'.format(FSNeptuneCSVLoader.RELATION_DIR_PATH): relationship_files_folder,

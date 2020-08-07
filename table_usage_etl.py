@@ -8,7 +8,6 @@ from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_neptune_csv_loader import FSNeptuneCSVLoader
 from databuilder.publisher.neptune_upsert_publisher import NeptuneUpsertPublisher
 from databuilder.task.task import DefaultTask
-from databuilder import neptune_client
 
 Base = declarative_base()
 

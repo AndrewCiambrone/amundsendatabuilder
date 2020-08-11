@@ -1,6 +1,6 @@
 import requests
 import hashlib, hmac
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Any
 from datetime import datetime
 import urllib
 
@@ -73,7 +73,7 @@ class BulkUploaderNeptuneClient:
         now = datetime.utcnow()
         amazon_date_str = now.strftime('%Y%m%dT%H%M%SZ')
 
-        authorization_header = BulkUploaderNeptuneClient._make_authorization_header(
+        authorization_header = self._make_authorization_header(
             method=method,
             endpoint=endpoint,
             query_string=query_params,

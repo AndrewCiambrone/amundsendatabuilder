@@ -20,7 +20,7 @@ class GithubClient:
             return self._get_all_file_urls_in_directory(repo_name, directory)
         except Exception as e:
             # handle unknown exception
-            pass
+            raise e
 
     def _get_all_file_urls_in_directory(self, repo_name,  directory):
         # type: (str, str) -> List[str]

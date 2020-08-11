@@ -38,6 +38,7 @@ class GithubClient:
         )
         print(response.status_code)
         if response.status_code != 200:
+            print(url)
             print(response.content)
         response_json = response.json()
         for file_object in response_json:

@@ -37,7 +37,10 @@ class BulkUploaderNeptuneClient:
 
     def is_bulk_status_job_done(self, load_id):
         status_response = self.get_status_on_bulk_loader(load_id)
-        status = status_response['payload']['overallStatus']['status']
+        status = status_response.get('payload', {}).get('overallStatus', {}).get('status')
+        if not status:
+            print("Ran into Error")
+            print(repr(status_response))
         return status != 'LOAD_IN_PROGRESS', status
 
     def get_status_on_bulk_loader(self, load_id):

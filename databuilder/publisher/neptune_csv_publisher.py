@@ -67,6 +67,7 @@ class NeptuneCSVPublisher(Publisher):
             bucket=self.bucket_name,
             s3_folder_location=s3_folder_location,
         )
+        print("bulk loading id is: {}".format(bulk_upload_id))
 
         is_complete, status = bulk_loader_client.is_bulk_status_job_done(
             load_id=bulk_upload_id,

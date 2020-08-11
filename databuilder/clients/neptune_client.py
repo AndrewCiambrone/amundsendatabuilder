@@ -33,7 +33,10 @@ class BulkUploaderNeptuneClient:
             endpoint='/loader/',
             body_payload=payload
         )
-        return response_json.get('payload', {}).get('loadId')
+        load_id = response_json.get('payload', {}).get('loadId')
+        if load_id is None:
+            print(response_json)
+        return load_id
 
     def is_bulk_status_job_done(self, load_id):
         status_response = self.get_status_on_bulk_loader(load_id)

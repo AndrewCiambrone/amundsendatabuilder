@@ -36,6 +36,7 @@ class GithubClient:
             headers=self._request_headers,
             auth=self._request_auth
         )
+        print(response.status_code)
         response_json = response.json()
         for file_object in response_json:
             if _is_file_object_a_directory(file_object):

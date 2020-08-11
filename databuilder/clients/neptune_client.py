@@ -8,6 +8,9 @@ import urllib
 class BulkUploaderNeptuneClient:
     def __init__(self, neptune_host, region, access_key, access_secret, session_token=None):
         # type: (str, str, str, str, Union[str, None]) -> None
+        assert access_key
+        assert access_secret
+        assert access_key != access_secret
         self.neptune_host = neptune_host
         self.region = region
         self.access_key = access_key

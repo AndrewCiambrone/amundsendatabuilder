@@ -124,6 +124,7 @@ class MergeTask(Task):
                 record = self.parent_extractor.extract()
                 count += 1
                 if count > 0 and count % self._progress_report_frequency == 0:
+                    print('Extracted {} records so far'.format(count))
                     LOGGER.info('Extracted {} records so far'.format(count))
 
         finally:

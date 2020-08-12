@@ -84,6 +84,7 @@ class NeptuneCSVPublisher(Publisher):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]
         edge_names = [join(self.relation_files_dir, f) for f in listdir(self.relation_files_dir) if isfile(join(self.relation_files_dir, f))]
         file_names = node_names + edge_names
+        print("Uploading {} files to s3".format(len(file_names)))
         for file_location in file_names:
             with open(file_location, 'rb') as file_csv:
                 file_name = os.path.basename(file_location)

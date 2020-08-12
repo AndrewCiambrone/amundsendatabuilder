@@ -20,6 +20,7 @@ class NeptuneExtractor(Extractor):
 
     AWS_ACCESS_KEY_CONFIG_KEY = 'aws_access_key'
     AWS_SECRET_KEY_CONFIG_KEY = 'aws_secret_key'
+    AWS_SESSION_TOKEN = 'aws_session_token'
 
     GREMLIN_QUERY_CONFIG_KEY = 'gremlin_query'
     MODEL_CLASS_CONFIG_KEY = 'model_class'
@@ -28,6 +29,7 @@ class NeptuneExtractor(Extractor):
         # type: (ConfigTree) -> None
         self.aws_access_key = conf.get_string(NeptuneExtractor.AWS_ACCESS_KEY_CONFIG_KEY)
         self.aws_secret_key = conf.get_string(NeptuneExtractor.AWS_SECRET_KEY_CONFIG_KEY)
+        self.aws_session_token = conf.get_string(NeptuneExtractor.AWS_SESSION_TOKEN)
         self.aws_region = conf.get_string(NeptuneExtractor.REGION_CONFIG_KEY)
         self.neptune_host = conf.get_string(NeptuneExtractor.NEPTUNE_HOST_CONFIG_KEY)
         self.gremlin_query = conf.get_string(NeptuneExtractor.GREMLIN_QUERY_CONFIG_KEY)
@@ -53,9 +55,9 @@ class NeptuneExtractor(Extractor):
             'aws_secret_access_key': self.aws_secret_key,
             'service_region': self.aws_region
         }
-        extra_options = {
-            'session_token': None
-        }
+        extra_options = {}
+        if self.aws_session_token:
+            extra_options['session_token'] = self.aws_session_token
         g = neptune_client.get_graph(
             host=self.neptune_host,
             password=auth_dict,

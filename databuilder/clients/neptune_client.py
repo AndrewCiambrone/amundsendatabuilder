@@ -138,13 +138,9 @@ class BulkUploaderNeptuneClient:
         datetime_str = request_datetime.strftime('%Y%m%dT%H%M%SZ')
         credential_scope = date_stamp_str + '/' + self.region + '/neptune-db/aws4_request'
         signed_headers = 'host;x-amz-date'
-        if self.session_token:
-            signed_headers = signed_headers + 'x-amz-security-token'
         signing_key = BulkUploaderNeptuneClient._get_signature_key(self.access_secret, date_stamp_str, self.region)
 
         canonical_headers = 'host:' + self.neptune_host + '\n' + 'x-amz-date:' + datetime_str + '\n'
-        if self.session_token:
-            canonical_headers = canonical_headers + "x-amz-security-token:" + self.session_token + '\n'
         hashed_payload = hashlib.sha256(payload.encode('utf-8')).hexdigest()
         canonical_request = "{method}\n{endpoint}\n{querystring}\n{canonical_headers}\n{signed_headers}\n{hashed_payload}".format(
             method=method,

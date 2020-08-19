@@ -56,13 +56,12 @@ class PostgresUserExtractor(Extractor):
         :return:
         """
         for row in self._get_raw_extract_iter():
-            (user_name, ) = row
-            first, last = user_name.split("_", 1)
+            (user_name, email, first_name, last_name) = row
 
             yield User(
-                user_name,
-                first_name=first.capitalize(),
-                last_name=last.capitalize(),
+                email,
+                first_name=first_name.capitalize(),
+                last_name=last_name.capitalize(),
                 do_not_update_empty_attribute=True
             )
 

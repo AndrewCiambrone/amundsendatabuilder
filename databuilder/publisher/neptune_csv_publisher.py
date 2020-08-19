@@ -29,6 +29,7 @@ class NeptuneCSVPublisher(Publisher):
     AWS_ACCESS_KEY = 'aws_access_key'
     AWS_SECRET_KEY = 'aws_secret_key'
     AWS_SESSION_TOKEN = 'aws_session_token'
+    AWS_ARN = 'aws_arn'
 
     def __init__(self):
         # type: () -> None
@@ -45,6 +46,7 @@ class NeptuneCSVPublisher(Publisher):
         self.aws_access_key = conf.get_string(NeptuneCSVPublisher.AWS_ACCESS_KEY)
         self.aws_secret_key = conf.get_string(NeptuneCSVPublisher.AWS_SECRET_KEY)
         self.aws_session_token = conf.get_string(NeptuneCSVPublisher.AWS_SESSION_TOKEN, default=None)
+        self.aws_arn = conf.get_string(NeptuneCSVPublisher.AWS_ARN)
 
         self.neptune_host = conf.get_string(NeptuneCSVPublisher.NEPTUNE_HOST)
 
@@ -60,6 +62,7 @@ class NeptuneCSVPublisher(Publisher):
             region=self.aws_region,
             access_key=self.aws_access_key,
             access_secret=self.aws_secret_key,
+            arn=self.aws_arn,
             session_token=self.aws_session_token
         )
 

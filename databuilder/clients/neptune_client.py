@@ -6,7 +6,7 @@ import urllib
 
 
 class BulkUploaderNeptuneClient:
-    def __init__(self, neptune_host, region, access_key, access_secret, session_token=None):
+    def __init__(self, neptune_host, region, access_key, access_secret, arn, session_token=None):
         # type: (str, str, str, str, Union[str, None]) -> None
         assert access_key
         assert access_secret
@@ -16,6 +16,7 @@ class BulkUploaderNeptuneClient:
         self.access_key = access_key
         self.access_secret = access_secret
         self.session_token = session_token
+        self.arn = arn
 
     def make_bulk_upload_request(self, bucket, s3_folder_location):
         # type: (str, str) -> str
@@ -27,8 +28,7 @@ class BulkUploaderNeptuneClient:
             "source": s3_source,
             "format": "csv",
             "region": self.region,
-            "accessKey": self.access_key,
-            "secretKey": self.access_secret,
+            "iamRoleArn": self.arn,
             "updateSingleCardinalityProperties": "TRUE"
         }
         response_json = self._make_signed_request(

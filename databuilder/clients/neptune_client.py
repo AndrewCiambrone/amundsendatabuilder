@@ -28,7 +28,8 @@ class BulkUploaderNeptuneClient:
             "source": s3_source,
             "format": "csv",
             "region": self.region,
-            "iamRoleArn": self.arn,
+            "accessKey": self.access_key,
+            "secretKey": self.access_secret,
             "updateSingleCardinalityProperties": "TRUE"
         }
         response_json = self._make_signed_request(

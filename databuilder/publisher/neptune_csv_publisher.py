@@ -51,7 +51,7 @@ class NeptuneCSVPublisher(Publisher):
         self.neptune_host = conf.get_string(NeptuneCSVPublisher.NEPTUNE_HOST)
 
     def publish_impl(self):
-        datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
+        datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         s3_folder_location = "{base_directory}/{datetime_portion}".format(
             base_directory=self.base_amundsen_data_path,
             datetime_portion=datetime_portion,

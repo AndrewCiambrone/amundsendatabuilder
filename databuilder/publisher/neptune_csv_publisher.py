@@ -51,11 +51,15 @@ class NeptuneCSVPublisher(Publisher):
         self.neptune_host = conf.get_string(NeptuneCSVPublisher.NEPTUNE_HOST)
 
     def publish_impl(self):
+        if not self._is_upload_required():
+            return
+        
         datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         s3_folder_location = "{base_directory}/{datetime_portion}".format(
             base_directory=self.base_amundsen_data_path,
             datetime_portion=datetime_portion,
         )
+
         self.upload_files(s3_folder_location)
         bulk_loader_client = BulkUploaderNeptuneClient(
             neptune_host=self.neptune_host,
@@ -82,6 +86,9 @@ class NeptuneCSVPublisher(Publisher):
             )
 
         print(status)
+
+    def _is_upload_required(self):
+        return len(self.node_files_dir) or len(self.relation_files_dir)
 
     def upload_files(self, s3_folder_location):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

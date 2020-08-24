@@ -53,7 +53,7 @@ class NeptuneCSVPublisher(Publisher):
     def publish_impl(self):
         if not self._is_upload_required():
             return
-        
+
         datetime_portion = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         s3_folder_location = "{base_directory}/{datetime_portion}".format(
             base_directory=self.base_amundsen_data_path,
@@ -88,7 +88,7 @@ class NeptuneCSVPublisher(Publisher):
         print(status)
 
     def _is_upload_required(self):
-        return len(self.node_files_dir) or len(self.relation_files_dir)
+        return len(self.node_files_dir) > 0 or len(self.relation_files_dir) > 0
 
     def upload_files(self, s3_folder_location):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

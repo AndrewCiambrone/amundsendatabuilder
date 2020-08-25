@@ -9,7 +9,7 @@ NEPTUNE_HEADER_ID = "~id"
 NEPTUNE_HEADER_LABEL = "~label"
 NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME = "last_seen_datetime:Date(single)"
 NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME = "last_seen_datetime:Date"
-NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type:String"
+NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type:String(single)"
 NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME = "creation_type:String"
 
 NEPTUNE_CREATION_TYPE_JOB = "job"
@@ -76,7 +76,7 @@ def convert_node(node):
 
     for attr_key, attr_value in node.node_attributes.items():
         neptune_value_type = _get_neptune_type_for_value(attr_value)
-        doc_key = "{key_name}:{neptune_value_type}".format(
+        doc_key = "{key_name}:{neptune_value_type}(single)".format(
             key_name=attr_key,
             neptune_value_type=neptune_value_type
         )

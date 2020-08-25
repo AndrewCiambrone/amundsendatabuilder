@@ -9,6 +9,10 @@ NEPTUNE_HEADER_ID = "~id"
 NEPTUNE_HEADER_LABEL = "~label"
 NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME = "last_seen_datetime:Date(single)"
 NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME = "last_seen_datetime:Date"
+NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type:String"
+NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME = "creation_type:String"
+
+NEPTUNE_CREATION_TYPE_JOB = "job"
 
 NEPTUNE_RELATIONSHIP_HEADER_FROM = "~from"
 NEPTUNE_RELATIONSHIP_HEADER_TO = "~to"
@@ -32,7 +36,8 @@ def convert_relationship(relationship):
         NEPTUNE_RELATIONSHIP_HEADER_FROM: relationship.start_key,
         NEPTUNE_RELATIONSHIP_HEADER_TO: relationship.end_key,
         NEPTUNE_HEADER_LABEL: relationship.type,
-        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time
+        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time,
+        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
     }
 
     reverse_relationship_doc = {
@@ -40,7 +45,8 @@ def convert_relationship(relationship):
         NEPTUNE_RELATIONSHIP_HEADER_FROM: relationship.end_key,
         NEPTUNE_RELATIONSHIP_HEADER_TO: relationship.start_key,
         NEPTUNE_HEADER_LABEL: relationship.reverse_type,
-        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time
+        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time,
+        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
     }
 
     for key, value in relationship.relationship_attributes.items():
@@ -64,7 +70,8 @@ def convert_node(node):
     node_dict = {
         NEPTUNE_HEADER_ID: node.id,
         NEPTUNE_HEADER_LABEL: node.label,
-        NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME: current_string_time
+        NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME: current_string_time,
+        NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
     }
 
     for attr_key, attr_value in node.node_attributes.items():

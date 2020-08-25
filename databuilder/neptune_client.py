@@ -4,7 +4,7 @@ from gremlin_python.driver.driver_remote_connection import \
     DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
 from gremlin_python.process.graph_traversal import GraphTraversalSource
-from gremlin_python.process.traversal import T, Order, gt, Cardinality
+from gremlin_python.process.traversal import T, Order, gt, Cardinality, Column
 from gremlin_python.process.graph_traversal import __
 
 g = None
@@ -71,6 +71,14 @@ def get_table_info_for_search(g):
         by(__.inE('TAG').outV().id().fold()). \
         toList()
     return result
+
+
+def get_all_nodes_grouped_by_label(*, g):
+    return g.V().groupCount().by(T.label).unfold(). \
+        project('label', 'count'). \
+        by(Column.keys). \
+        by(Column.values).\
+        toList()
 
 
 def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,

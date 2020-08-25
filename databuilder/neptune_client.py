@@ -81,6 +81,15 @@ def get_all_nodes_grouped_by_label(*, g):
         toList()
 
 
+def get_all_nodes_grouped_by_label_filtered(g, filter_property_name, filter_property_value):
+    # type: (GraphTraversalSource, str, str) -> Dict[str, int]
+    return g.V().has(filter_property_name, filter_property_value).groupCount().by(T.label).unfold(). \
+        project('label', 'count'). \
+        by(Column.keys). \
+        by(Column.values). \
+        toList()
+
+
 def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,
                  password: Optional[Union[str, Mapping[str, str]]] = None,
                  driver_remote_connection_options: Mapping[str, Any] = {},

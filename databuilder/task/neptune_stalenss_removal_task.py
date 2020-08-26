@@ -1,8 +1,8 @@
 import logging
 import textwrap
 import time
+from datetime import datetime, timedelta
 
-from neo4j import GraphDatabase  # noqa: F401
 from pyhocon import ConfigFactory  # noqa: F401
 from pyhocon import ConfigTree  # noqa: F401
 from typing import Dict, Iterable, Any  # noqa: F401
@@ -11,7 +11,14 @@ from databuilder import Scoped
 from databuilder.publisher.neo4j_csv_publisher import JOB_PUBLISH_TAG
 from databuilder.task.base_task import Task  # noqa: F401
 from databuilder import neptune_client
-
+from databuilder.serializers.neptune_serializer import (
+    NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME,
+    NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME,
+    NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME,
+    NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME,
+    NEPTUNE_CREATION_TYPE_JOB
+)
+from gremlin_python.process import traversal
 NEPTUNE_HOST_KEY = 'neptune_host'
 NEPTUNE_MAX_CONN_LIFE_TIME_SEC = 'neptune_max_conn_life_time_sec'
 AWS_ACCESS_KEY = 'aws_access_key'
@@ -27,9 +34,7 @@ DRY_RUN = "dry_run"
 STALENESS_MAX_PCT = "staleness_max_pct"
 # Staleness max percentage per LABEL/TYPE. Safety net to prevent majority of data being deleted.
 STALENESS_PCT_MAX_DICT = "staleness_max_pct_dict"
-# Using this milliseconds and published timestamp to determine staleness
-MS_TO_EXPIRE = "milliseconds_to_expire"
-MIN_MS_TO_EXPIRE = "minimum_milliseconds_to_expire"
+STALENESS_CUT_OFF_IN_SECONDS = "staleness_cut_off_in_seconds"
 
 DEFAULT_CONFIG = ConfigFactory.from_dict({
     BATCH_SIZE: 100,
@@ -38,7 +43,6 @@ DEFAULT_CONFIG = ConfigFactory.from_dict({
     TARGET_NODES: [],
     TARGET_RELATIONS: [],
     STALENESS_PCT_MAX_DICT: {},
-    MIN_MS_TO_EXPIRE: 86400000,
     DRY_RUN: False
 })
 
@@ -83,18 +87,8 @@ class NeptuneStalenessRemovalTask(Task):
             'service_region': conf.get_string(AWS_REGION),
         }
 
-        if JOB_PUBLISH_TAG in conf and MS_TO_EXPIRE in conf:
-            raise Exception('Cannot have both {} and {} in job config'.format(JOB_PUBLISH_TAG, MS_TO_EXPIRE))
-
-        self.ms_to_expire = None
-        if MS_TO_EXPIRE in conf:
-            self.ms_to_expire = conf.get_int(MS_TO_EXPIRE)
-            if self.ms_to_expire < conf.get_int(MIN_MS_TO_EXPIRE):
-                raise Exception('{} is too small'.format(MS_TO_EXPIRE))
-            self.marker = '(timestamp() - {})'.format(conf.get_int(MS_TO_EXPIRE))
-        else:
-            self.marker = conf.get_string(JOB_PUBLISH_TAG)
-
+        self.staleness_cut_off_in_seconds = conf.get_string(STALENESS_CUT_OFF_IN_SECONDS)
+        self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
         self._driver = neptune_client.get_graph(
             host=self.neptune_host,
             password=self.auth_dict
@@ -201,42 +195,30 @@ class NeptuneStalenessRemovalTask(Task):
     def _validate_node_staleness_pct(self):
         # type: () -> None
 
-        total_nodes_statement = neptune_client.get_all_nodes_grouped_by_label(g=self._driver)
-
-        stale_nodes_statement = textwrap.dedent("""
-        MATCH (n)
-        WHERE {}
-        WITH DISTINCT labels(n) as node, count(*) as count
-        RETURN head(node) as type, count
-        """)
-
-        stale_nodes_statement = textwrap.dedent(self._decorate_staleness(stale_nodes_statement))
-
-        total_records = self._execute_cypher_query(statement=total_nodes_statement)
-        stale_records = self._execute_cypher_query(statement=stale_nodes_statement,
-                                                   param_dict={MARKER_VAR_NAME: self.marker})
+        total_records = neptune_client.get_all_nodes_grouped_by_label(g=self._driver)
+        filter_properties = [
+            (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
+            (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
+        ]
+        stale_records = neptune_client.get_all_nodes_grouped_by_label_filtered(
+            g=self._driver,
+            filter_properties=filter_properties
+        )
         self._validate_staleness_pct(total_records=total_records,
                                      stale_records=stale_records,
                                      types=self.target_nodes)
 
     def _validate_relation_staleness_pct(self):
         # type: () -> None
-        total_relations_statement = textwrap.dedent("""
-        MATCH ()-[r]-()
-        RETURN type(r) as type, count(*) as count;
-        """)
-
-        stale_relations_statement = textwrap.dedent("""
-        MATCH ()-[n]-()
-        WHERE {}
-        RETURN type(n) as type, count(*) as count
-        """)
-
-        stale_relations_statement = textwrap.dedent(self._decorate_staleness(stale_relations_statement))
-
-        total_records = self._execute_cypher_query(statement=total_relations_statement)
-        stale_records = self._execute_cypher_query(statement=stale_relations_statement,
-                                                   param_dict={MARKER_VAR_NAME: self.marker})
+        total_records = neptune_client.get_all_edges_grouped_by_label(g=self._driver)
+        filter_properties = [
+            (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
+            (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
+        ]
+        stale_records = neptune_client.get_all_edges_grouped_by_label_filtered(
+            g=self._driver,
+            filter_properties=filter_properties
+        )
         self._validate_staleness_pct(total_records=total_records,
                                      stale_records=stale_records,
                                      types=self.target_relations)

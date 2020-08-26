@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, Union, Mapping
+from typing import Optional, Dict, Any, Union, Mapping, Tuple, List, Callable
 from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTransport, WebsocketClientTransport
 from gremlin_python.driver.driver_remote_connection import \
     DriverRemoteConnection
@@ -73,18 +73,44 @@ def get_table_info_for_search(g):
     return result
 
 
-def get_all_nodes_grouped_by_label(*, g):
-    return g.V().groupCount().by(T.label).unfold(). \
-        project('label', 'count'). \
+def get_all_edges_grouped_by_label(g):
+    return g.E().groupCount().by(T.label).unfold(). \
+        project('type', 'count'). \
         by(Column.keys). \
-        by(Column.values).\
+        by(Column.values). \
         toList()
 
 
-def get_all_nodes_grouped_by_label_filtered(g, filter_property_name, filter_property_value):
-    # type: (GraphTraversalSource, str, str) -> Dict[str, int]
-    return g.V().has(filter_property_name, filter_property_value).groupCount().by(T.label).unfold(). \
-        project('label', 'count'). \
+def get_all_edges_grouped_by_label_filtered(g, filter_properties):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
+    tx = g.E()
+    for filter_property in filter_properties:
+        (filter_property_name, filter_property_value, filter_operator) = filter_property
+        tx = tx.has(filter_property_name, filter_operator(filter_property_value))
+    return tx.groupCount().by(T.label).unfold().\
+        project('type', 'count'). \
+        by(Column.keys). \
+        by(Column.values). \
+        toList()
+
+
+def get_all_nodes_grouped_by_label(g):
+    return g.V().groupCount().by(T.label).unfold(). \
+        project('type', 'count'). \
+        by(Column.keys). \
+        by(Column.values). \
+        toList()
+
+
+def get_all_nodes_grouped_by_label_filtered(g, filter_properties):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
+    tx = g.V()
+    for filter_property in filter_properties:
+        (filter_property_name, filter_property_value, filter_operator) = filter_property
+        tx = tx.has(filter_property_name, filter_operator(filter_property_value))
+
+    return tx.groupCount().by(T.label).unfold(). \
+        project('type', 'count'). \
         by(Column.keys). \
         by(Column.values). \
         toList()

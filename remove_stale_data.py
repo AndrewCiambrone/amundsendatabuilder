@@ -1,7 +1,9 @@
 from databuilder import neptune_client
 import os
 from gremlin_python.process.traversal import T, Column
+from gremlin_python.process import traversal
 from gremlin_python.process.graph_traversal import __
+from datetime import datetime, timedelta
 
 
 def remove_stale_data():
@@ -16,6 +18,8 @@ def remove_stale_data():
         'aws_secret_access_key': access_secret,
         'service_region': aws_zone
     }
+    yesterday = datetime.utcnow() - timedelta(days=1)
+    filter_properties = [()]
     g = neptune_client.get_graph(
         host=neptune_host,
         password=auth_dict

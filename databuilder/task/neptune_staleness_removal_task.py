@@ -102,8 +102,8 @@ class NeptuneStalenessRemovalTask(Task):
         :return:
         """
         self.validate()
-        self._delete_stale_nodes()
         self._delete_stale_relations()
+        self._delete_stale_nodes()
 
     def validate(self) -> None:
         """

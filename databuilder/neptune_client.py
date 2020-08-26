@@ -3,7 +3,7 @@ from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTrans
 from gremlin_python.driver.driver_remote_connection import \
     DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
-from gremlin_python.process.graph_traversal import GraphTraversalSource
+from gremlin_python.process.graph_traversal import GraphTraversalSource,GraphTraversal
 from gremlin_python.process.traversal import T, Order, gt, Cardinality, Column
 from gremlin_python.process.graph_traversal import __
 
@@ -105,15 +105,26 @@ def get_all_nodes_grouped_by_label(g):
 def get_all_nodes_grouped_by_label_filtered(g, filter_properties):
     # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
     tx = g.V()
-    for filter_property in filter_properties:
-        (filter_property_name, filter_property_value, filter_operator) = filter_property
-        tx = tx.has(filter_property_name, filter_operator(filter_property_value))
+
 
     return tx.groupCount().by(T.label).unfold(). \
         project('type', 'count'). \
         by(Column.keys). \
         by(Column.values). \
         toList()
+
+
+def _filter_transaction(tx, filter_properties):
+    # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal
+    for filter_property in filter_properties:
+        (filter_property_name, filter_property_value, filter_operator) = filter_property
+        tx = tx.has(filter_property_name, filter_operator(filter_property_value))
+    return tx
+
+
+def delete_edges(g, filter_properties):
+    tx = g.E()
+
 
 
 def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,

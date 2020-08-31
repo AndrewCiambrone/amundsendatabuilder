@@ -111,23 +111,38 @@ def get_all_nodes_grouped_by_label_filtered(g, filter_properties):
         toList()
 
 
-
-
-
-def delete_edges(g, filter_properties, edge_labels):
-    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str]) -> None
+def delete_edges(g, filter_properties, edge_labels, batch_size=None):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str], Optional[int]) -> None
     tx = g.E()
+    tx = tx.hasLabel(*edge_labels)
     tx = _filter_transaction(tx, filter_properties)
+    if batch_size:
+        tx = tx.limit(batch_size)
+        try:
+            while True:
+                tx.drop().iterate()
+        except Exception as e:
+            print(e)
+            return
+
     tx.drop().iterate()
 
 
-def delete_nodes(g, filter_properties, node_labels):
-    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str]) -> None
+def delete_nodes(g, filter_properties, node_labels, batch_size=None):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str], Optional[int]) -> None
     tx = g.V()
     tx = tx.hasLabel(*node_labels)
     tx = _filter_transaction(tx, filter_properties)
-    tx.drop().iterate()
+    if batch_size:
+        tx = tx.limit(batch_size)
+        try:
+            while True:
+                tx.drop().iterate()
+        except Exception as e:
+            print(e)
+            return
 
+    tx.drop().iterate()
 
 def _filter_transaction(tx, filter_properties):
     # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal

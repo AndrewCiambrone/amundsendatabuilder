@@ -1,6 +1,4 @@
 import logging
-import textwrap
-import time
 from datetime import datetime, timedelta
 
 from pyhocon import ConfigFactory  # noqa: F401
@@ -8,7 +6,6 @@ from pyhocon import ConfigTree  # noqa: F401
 from typing import Dict, Iterable, Any  # noqa: F401
 
 from databuilder import Scoped
-from databuilder.publisher.neo4j_csv_publisher import JOB_PUBLISH_TAG
 from databuilder.task.base_task import Task  # noqa: F401
 from databuilder import neptune_client
 from databuilder.serializers.neptune_serializer import (
@@ -19,36 +16,8 @@ from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_JOB
 )
 from gremlin_python.process import traversal
-NEPTUNE_HOST_KEY = 'neptune_host'
-NEPTUNE_MAX_CONN_LIFE_TIME_SEC = 'neptune_max_conn_life_time_sec'
-AWS_ACCESS_KEY = 'aws_access_key'
-AWS_ACCESS_SECRET = 'aws_access_secret'
-AWS_REGION = 'aws_region'
-
-
-TARGET_NODES = "target_nodes"
-TARGET_RELATIONS = "target_relations"
-BATCH_SIZE = "batch_size"
-DRY_RUN = "dry_run"
-# Staleness max percentage. Safety net to prevent majority of data being deleted.
-STALENESS_MAX_PCT = "staleness_max_pct"
-# Staleness max percentage per LABEL/TYPE. Safety net to prevent majority of data being deleted.
-STALENESS_PCT_MAX_DICT = "staleness_max_pct_dict"
-STALENESS_CUT_OFF_IN_SECONDS = "staleness_cut_off_in_seconds"
-
-DEFAULT_CONFIG = ConfigFactory.from_dict({
-    BATCH_SIZE: 100,
-    NEPTUNE_MAX_CONN_LIFE_TIME_SEC: 50,
-    STALENESS_MAX_PCT: 5,
-    TARGET_NODES: [],
-    TARGET_RELATIONS: [],
-    STALENESS_PCT_MAX_DICT: {},
-    DRY_RUN: False
-})
 
 LOGGER = logging.getLogger(__name__)
-
-MARKER_VAR_NAME = 'marker'
 
 
 class NeptuneStalenessRemovalTask(Task):
@@ -59,6 +28,30 @@ class NeptuneStalenessRemovalTask(Task):
     Not all resource is being published by Neo4jCsvPublisher and you can only set specific LABEL of the node or TYPE
     of relation to perform this deletion.
     """
+
+    # Config keys
+    NEPTUNE_HOST = 'neptune_host'
+    AWS_ACCESS_KEY = 'aws_access_key'
+    AWS_ACCESS_SECRET = 'aws_access_secret'
+    AWS_REGION = 'aws_region'
+    TARGET_NODES = "target_nodes"
+    TARGET_RELATIONS = "target_relations"
+    BATCH_SIZE = "batch_size"
+    DRY_RUN = "dry_run"
+    # Staleness max percentage. Safety net to prevent majority of data being deleted.
+    STALENESS_MAX_PCT = "staleness_max_pct"
+    # Staleness max percentage per LABEL/TYPE. Safety net to prevent majority of data being deleted.
+    STALENESS_PCT_MAX_DICT = "staleness_max_pct_dict"
+    # Sets how old the nodes and relationships can be
+    STALENESS_CUT_OFF_IN_SECONDS = "staleness_cut_off_in_seconds"
+    DEFAULT_CONFIG = ConfigFactory.from_dict({
+        BATCH_SIZE: 100,
+        STALENESS_MAX_PCT: 5,
+        TARGET_NODES: [],
+        TARGET_RELATIONS: [],
+        STALENESS_PCT_MAX_DICT: {},
+        DRY_RUN: False
+    })
 
     def __init__(self):
         # type: () -> None
@@ -72,22 +65,22 @@ class NeptuneStalenessRemovalTask(Task):
         # type: (ConfigTree) -> None
         conf = Scoped.get_scoped_conf(conf, self.get_scope()) \
             .with_fallback(conf) \
-            .with_fallback(DEFAULT_CONFIG)
-        self.target_nodes = set(conf.get_list(TARGET_NODES))
-        self.target_relations = set(conf.get_list(TARGET_RELATIONS))
-        self.batch_size = conf.get_int(BATCH_SIZE)
-        self.dry_run = conf.get_bool(DRY_RUN)
-        self.staleness_pct = conf.get_int(STALENESS_MAX_PCT)
-        self.staleness_pct_dict = conf.get(STALENESS_PCT_MAX_DICT)
-        self.neptune_host = conf.get_string(NEPTUNE_HOST_KEY)
+            .with_fallback(NeptuneStalenessRemovalTask.DEFAULT_CONFIG)
+        self.target_nodes = set(conf.get_list(NeptuneStalenessRemovalTask.TARGET_NODES))
+        self.target_relations = set(conf.get_list(NeptuneStalenessRemovalTask.TARGET_RELATIONS))
+        self.batch_size = conf.get_int(NeptuneStalenessRemovalTask.BATCH_SIZE)
+        self.dry_run = conf.get_bool(NeptuneStalenessRemovalTask.DRY_RUN)
+        self.staleness_pct = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_MAX_PCT)
+        self.staleness_pct_dict = conf.get(NeptuneStalenessRemovalTask.STALENESS_PCT_MAX_DICT)
+        self.neptune_host = conf.get_string(NeptuneStalenessRemovalTask.NEPTUNE_HOST)
 
         self.auth_dict = {
-            'aws_access_key_id': conf.get_string(AWS_ACCESS_KEY),
-            'aws_secret_access_key': conf.get_string(AWS_ACCESS_SECRET),
-            'service_region': conf.get_string(AWS_REGION),
+            'aws_access_key_id': conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_KEY),
+            'aws_secret_access_key': conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET),
+            'service_region': conf.get_string(NeptuneStalenessRemovalTask.AWS_REGION),
         }
 
-        self.staleness_cut_off_in_seconds = conf.get_string(STALENESS_CUT_OFF_IN_SECONDS)
+        self.staleness_cut_off_in_seconds = conf.get_string(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
         self._driver = neptune_client.get_graph(
             host=self.neptune_host,
@@ -121,33 +114,20 @@ class NeptuneStalenessRemovalTask(Task):
         neptune_client.delete_nodes(
             g=self._driver,
             filter_properties=filter_properties,
-            node_labels=list(self.target_nodes)
+            node_labels=list(self.target_nodes),
+            batch_size=self.batch_size
         )
-
-    def _decorate_staleness(self, statement):
-        """
-        Append where clause to the Cypher statement depends on which field to be used to expire stale data.
-        :param statement:
-        :return:
-        """
-        if self.ms_to_expire:
-            return statement.format(textwrap.dedent("""
-            n.publisher_last_updated_epoch_ms < ${marker}
-            OR NOT EXISTS(n.publisher_last_updated_epoch_ms)""".format(marker=MARKER_VAR_NAME)))
-
-        return statement.format(textwrap.dedent("""
-        n.published_tag <> ${marker}
-        OR NOT EXISTS(n.published_tag)""".format(marker=MARKER_VAR_NAME)))
 
     def _delete_stale_relations(self):
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        neptune_client.delete_nodes(
+        neptune_client.delete_edges(
             g=self._driver,
             filter_properties=filter_properties,
-            node_labels=list(self.target_relations)
+            edge_labels=list(self.target_relations),
+            batch_size=self.batch_size
         )
 
     def _validate_staleness_pct(self, total_records, stale_records, types):

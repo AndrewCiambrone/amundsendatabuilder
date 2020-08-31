@@ -144,6 +144,7 @@ def delete_nodes(g, filter_properties, node_labels, batch_size=None):
 
     tx.drop().iterate()
 
+
 def _filter_transaction(tx, filter_properties):
     # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal
     for filter_property in filter_properties:

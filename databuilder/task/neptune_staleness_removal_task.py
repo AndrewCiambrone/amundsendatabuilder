@@ -114,14 +114,15 @@ class NeptuneStalenessRemovalTask(Task):
         self._validate_relation_staleness_pct()
 
     def _delete_stale_nodes(self):
-        statement = textwrap.dedent("""
-        MATCH (n:{{type}})
-        WHERE {}
-        WITH n LIMIT $batch_size
-        DETACH DELETE (n)
-        RETURN COUNT(*) as count;
-        """)
-        self._batch_delete(statement=self._decorate_staleness(statement), targets=self.target_nodes)
+        filter_properties = [
+            (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
+            (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
+        ]
+        neptune_client.delete_nodes(
+            g=self._driver,
+            filter_properties=filter_properties,
+            node_labels=list(self.target_nodes)
+        )
 
     def _decorate_staleness(self, statement):
         """
@@ -139,36 +140,15 @@ class NeptuneStalenessRemovalTask(Task):
         OR NOT EXISTS(n.published_tag)""".format(marker=MARKER_VAR_NAME)))
 
     def _delete_stale_relations(self):
-        statement = textwrap.dedent("""
-        MATCH ()-[n:{{type}}]-()
-        WHERE {}
-        WITH n LIMIT $batch_size
-        DELETE n
-        RETURN count(*) as count;
-        """)
-        self._batch_delete(statement=self._decorate_staleness(statement), targets=self.target_relations)
-
-    def _batch_delete(self, statement, targets):
-        """
-        Performing huge amount of deletion could degrade Neo4j performance. Therefore, it's taking batch deletion here.
-        :param statement:
-        :param targets:
-        :return:
-        """
-        for t in targets:
-            LOGGER.info('Deleting stale data of {} with batch size {}'.format(t, self.batch_size))
-            total_count = 0
-            while True:
-                results = self._execute_cypher_query(statement=statement.format(type=t),
-                                                     param_dict={'batch_size': self.batch_size,
-                                                                 MARKER_VAR_NAME: self.marker},
-                                                     dry_run=self.dry_run)
-                record = next(iter(results), None)
-                count = record['count'] if record else 0
-                total_count = total_count + count
-                if count == 0:
-                    break
-            LOGGER.info('Deleted {} stale data of {}'.format(total_count, t))
+        filter_properties = [
+            (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
+            (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
+        ]
+        neptune_client.delete_nodes(
+            g=self._driver,
+            filter_properties=filter_properties,
+            node_labels=list(self.target_relations)
+        )
 
     def _validate_staleness_pct(self, total_records, stale_records, types):
         # type: (Iterable[Dict[str, Any]], Iterable[Dict[str, Any]], Iterable[str]) -> None
@@ -222,21 +202,3 @@ class NeptuneStalenessRemovalTask(Task):
         self._validate_staleness_pct(total_records=total_records,
                                      stale_records=stale_records,
                                      types=self.target_relations)
-
-    def _execute_cypher_query(self, statement, param_dict={}, dry_run=False):
-        # type: (str, Dict[str, Any]) -> Iterable[Dict[str, Any]]
-        LOGGER.info('Executing Cypher query: {statement} with params {params}: '.format(statement=statement,
-                                                                                        params=param_dict))
-
-        if dry_run:
-            LOGGER.info('Skipping for it is a dryrun')
-            return []
-
-        start = time.time()
-        try:
-            with self._driver.session() as session:
-                return session.run(statement, **param_dict)
-
-        finally:
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug('Cypher query execution elapsed for {} seconds'.format(time.time() - start))

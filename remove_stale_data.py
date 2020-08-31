@@ -1,32 +1,37 @@
-from databuilder import neptune_client
+from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
+from databuilder.job.job import DefaultJob
+from pyhocon import ConfigFactory
 import os
-from gremlin_python.process.traversal import T, Column
-from gremlin_python.process import traversal
-from gremlin_python.process.graph_traversal import __
-from datetime import datetime, timedelta
 
 
-def remove_stale_data():
+def create_remove_stale_data_job():
     access_key = os.getenv('AWS_KEY')
     access_secret = os.getenv('AWS_SECRET_KEY')
     aws_zone = os.getenv("AWS_ZONE")
     neptune_endpoint = os.getenv('NEPTUNE_ENDPOINT')
     neptune_port = os.getenv("NEPTUNE_PORT")
     neptune_host = "wss://{}:{}/gremlin".format(neptune_endpoint, neptune_port)
-    auth_dict = {
-        'aws_access_key_id': access_key,
-        'aws_secret_access_key': access_secret,
-        'service_region': aws_zone
-    }
-    yesterday = datetime.utcnow() - timedelta(days=1)
-    filter_properties = [()]
-    g = neptune_client.get_graph(
-        host=neptune_host,
-        password=auth_dict
+    target_relations = []
+    target_nodes = ['Table', 'User', 'Column', 'Programmatic_Description', "Schema"]
+    job_config = ConfigFactory.from_dict({
+        'task.remove_stale_data': {
+            NeptuneStalenessRemovalTask.BATCH_SIZE: 1000,
+            NeptuneStalenessRemovalTask.TARGET_RELATIONS: target_relations,
+            NeptuneStalenessRemovalTask.TARGET_NODES: target_nodes,
+            NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS: 86400,  # 1 day
+            NeptuneStalenessRemovalTask.NEPTUNE_HOST: neptune_host,
+            NeptuneStalenessRemovalTask.AWS_REGION: aws_zone,
+            NeptuneStalenessRemovalTask.AWS_ACCESS_KEY: access_key,
+            NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET: access_secret
+        }
+    })
+    job = DefaultJob(
+        conf=job_config,
+        task=NeptuneStalenessRemovalTask()
     )
-    test = g.V().groupCount().by(T.label).unfold().project('Entity Type', 'Count').by(Column.keys).by(Column.values)
-    print(g)
+    return job
 
 
 if __name__ == '__main__':
-    remove_stale_data()
+    job = create_remove_stale_data_job()
+    job.launch()

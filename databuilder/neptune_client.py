@@ -111,38 +111,22 @@ def get_all_nodes_grouped_by_label_filtered(g, filter_properties):
         toList()
 
 
-def delete_edges(g, filter_properties, edge_labels, batch_size=None):
-    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], Optional[List[str]], Optional[int]) -> None
+def delete_edges(g, filter_properties, edge_labels):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
     tx = g.E()
     if edge_labels:
         tx = tx.hasLabel(*edge_labels)
     tx = _filter_transaction(tx, filter_properties)
-    if batch_size:
-        tx = tx.limit(batch_size)
-        try:
-            while True:
-                tx.drop().iterate()
-        except Exception as e:
-            print(e)
-            return
 
     tx.drop().iterate()
 
 
-def delete_nodes(g, filter_properties, node_labels, batch_size=None):
-    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], Optional[List[str]], Optional[int]) -> None
+def delete_nodes(g, filter_properties, node_labels):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
     tx = g.V()
     if node_labels:
         tx = tx.hasLabel(*node_labels)
     tx = _filter_transaction(tx, filter_properties)
-    if batch_size:
-        tx = tx.limit(batch_size)
-        try:
-            while True:
-                tx.drop().iterate()
-        except Exception as e:
-            print(e)
-            return
 
     tx.drop().iterate()
 
@@ -155,10 +139,16 @@ def _filter_transaction(tx, filter_properties):
     return tx
 
 
-def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,
-                 password: Optional[Union[str, Mapping[str, str]]] = None,
-                 driver_remote_connection_options: Mapping[str, Any] = {},
-                 aws4auth_options: Mapping[str, Any] = {}, websocket_options: Mapping[str, Any] = {}) -> GraphTraversalSource:
+def create_gremlin_session(
+        *,
+        host: str,
+        port: Optional[int] = None,
+        user: str = None,
+        password: Optional[Union[str, Mapping[str, str]]] = None,
+        driver_remote_connection_options: Mapping[str, Any] = {},
+        aws4auth_options: Mapping[str, Any] = {},
+        websocket_options: Mapping[str, Any] = {}
+) -> GraphTraversalSource:
         driver_remote_connection_options = dict(driver_remote_connection_options)
         # as others, we repurpose host a url
         driver_remote_connection_options.update(url=host)

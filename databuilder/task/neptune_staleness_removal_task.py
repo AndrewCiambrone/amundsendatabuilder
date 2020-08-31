@@ -80,7 +80,7 @@ class NeptuneStalenessRemovalTask(Task):
             'service_region': conf.get_string(NeptuneStalenessRemovalTask.AWS_REGION),
         }
 
-        self.staleness_cut_off_in_seconds = conf.get_string(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
+        self.staleness_cut_off_in_seconds = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
         self._driver = neptune_client.get_graph(
             host=self.neptune_host,
@@ -114,8 +114,7 @@ class NeptuneStalenessRemovalTask(Task):
         neptune_client.delete_nodes(
             g=self._driver,
             filter_properties=filter_properties,
-            node_labels=list(self.target_nodes),
-            batch_size=self.batch_size
+            node_labels=list(self.target_nodes)
         )
 
     def _delete_stale_relations(self):
@@ -126,8 +125,7 @@ class NeptuneStalenessRemovalTask(Task):
         neptune_client.delete_edges(
             g=self._driver,
             filter_properties=filter_properties,
-            edge_labels=list(self.target_relations),
-            batch_size=self.batch_size
+            edge_labels=list(self.target_relations)
         )
 
     def _validate_staleness_pct(self, total_records, stale_records, types):

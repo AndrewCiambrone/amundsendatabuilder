@@ -84,9 +84,7 @@ def get_all_edges_grouped_by_label(g):
 def get_all_edges_grouped_by_label_filtered(g, filter_properties):
     # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
     tx = g.E()
-    for filter_property in filter_properties:
-        (filter_property_name, filter_property_value, filter_operator) = filter_property
-        tx = tx.has(filter_property_name, filter_operator(filter_property_value))
+    tx = _filter_transaction(tx, filter_properties)
     return tx.groupCount().by(T.label).unfold().\
         project('type', 'count'). \
         by(Column.keys). \
@@ -105,13 +103,30 @@ def get_all_nodes_grouped_by_label(g):
 def get_all_nodes_grouped_by_label_filtered(g, filter_properties):
     # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
     tx = g.V()
-
-
+    tx = _filter_transaction(tx, filter_properties)
     return tx.groupCount().by(T.label).unfold(). \
         project('type', 'count'). \
         by(Column.keys). \
         by(Column.values). \
         toList()
+
+
+
+
+
+def delete_edges(g, filter_properties, edge_labels):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str]) -> None
+    tx = g.E()
+    tx = _filter_transaction(tx, filter_properties)
+    tx.drop().iterate()
+
+
+def delete_nodes(g, filter_properties, node_labels):
+    # type: (GraphTraversalSource, List[Tuple[str, Any, Callable]], List[str]) -> None
+    tx = g.V()
+    tx = tx.hasLabel(*node_labels)
+    tx = _filter_transaction(tx, filter_properties)
+    tx.drop().iterate()
 
 
 def _filter_transaction(tx, filter_properties):
@@ -120,11 +135,6 @@ def _filter_transaction(tx, filter_properties):
         (filter_property_name, filter_property_value, filter_operator) = filter_property
         tx = tx.has(filter_property_name, filter_operator(filter_property_value))
     return tx
-
-
-def delete_edges(g, filter_properties):
-    tx = g.E()
-
 
 
 def create_gremlin_session( *, host: str, port: Optional[int] = None, user: str = None,

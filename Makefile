@@ -18,3 +18,8 @@ test_unit2_or3_if_its_default:
 
 test_unit3:
 	python3 -bb -m pytest tests/unit
+
+.PHONY: setup_gremlin_server
+setup_gremlin_server:
+	docker pull tinkerpop/gremlin-server:3.4.7
+	docker run -d -p 8182:8182 tinkerpop/gremlin-server:3.4.7

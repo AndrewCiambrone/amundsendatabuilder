@@ -28,6 +28,13 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self.patcher = patch.object(NeptuneSessionClient, '_create_graph_source', get_test_graph)
         self.patcher.start()
         self.key_name = 'key'
+        self.client = NeptuneSessionClient(
+            self.key_name,
+            'localhost',
+            'test',
+            'test',
+            'test'
+        )
 
     def tearDown(self) -> None:
         self._clear_graph()
@@ -38,54 +45,10 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         g.E().drop().iterate()
         g.V().drop().iterate()
 
-    def test_successful_staleness_removal_task(self):
-        client = NeptuneSessionClient(
-            self.key_name,
-            'localhost',
-            'test',
-            'test',
-            'test'
-        )
-
-        # create a recent node
-        client.upsert_node(node_id="test_1", node_label="Table", node_properties={
-            NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB,
-            NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: datetime.utcnow()
-        })
-
-        # create a Stale node
-        client.upsert_node(node_id="test_2", node_label="Table", node_properties={
-            NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB,
-            NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: datetime.utcnow() - timedelta(days=2)
-        })
-
-        # create a recent edge
-        client.upsert_edge(
-            start_node_id="test_1",
-            end_node_id="test_2",
-            edge_id="test_edge_1",
-            edge_label="TABLE_TO_TABLE",
-            edge_properties={
-                NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB,
-                NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: datetime.utcnow()
-            }
-        )
-
-        # create a stale edge
-        client.upsert_edge(
-            start_node_id="test_1",
-            end_node_id="test_2",
-            edge_id="test_edge_2",
-            edge_label="TABLE_TO_TABLE",
-            edge_properties={
-                NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB,
-                NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: datetime.utcnow() - timedelta(days=2)
-            }
-        )
-
+    def get_job_config(self):
         target_relations = ['TABLE_TO_TABLE']
         target_nodes = ['Table']
-        job_config = ConfigFactory.from_dict({
+        return ConfigFactory.from_dict({
             'task.remove_stale_data': {
                 NeptuneStalenessRemovalTask.BATCH_SIZE: 1000,
                 NeptuneStalenessRemovalTask.TARGET_RELATIONS: target_relations,
@@ -99,13 +62,54 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
             }
         })
 
+    def _create_test_node(self, node_id, node_label, is_stale=False, is_user_created=False):
+        # type: (str, str, bool, bool) -> None
+        creation_type = "User" if is_user_created else NEPTUNE_CREATION_TYPE_JOB
+        last_seen = datetime.utcnow() - timedelta(days=2) if is_stale else datetime.utcnow()
+        self.client.upsert_node(node_id=node_id, node_label=node_label, node_properties={
+            NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: creation_type,
+            NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: last_seen
+        })
+
+    def _create_test_edge(self, start_id, end_id, edge_id, label, is_stale=False, is_user_created=False):
+        creation_type = "User" if is_user_created else NEPTUNE_CREATION_TYPE_JOB
+        last_seen = datetime.utcnow() - timedelta(days=2) if is_stale else datetime.utcnow()
+        self.client.upsert_edge(
+            start_node_id=start_id,
+            end_node_id=end_id,
+            edge_id=edge_id,
+            edge_label=label,
+            edge_properties={
+                NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: creation_type,
+                NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: last_seen
+            }
+        )
+
+    def test_successful_staleness_removal_task(self):
+
+
+        # create a recent node
+        self._create_test_node(node_id="test_1", node_label="Table")
+
+        # create a Stale node
+        self._create_test_node(node_id="test_2", node_label="Table", is_stale=True)
+
+
+        # create a recent edge
+        self._create_test_edge('test_1', 'test_2', 'test_edge_1', 'TABLE_TO_TABLE')
+
+        # create a stale edge
+        self._create_test_edge('test_1', 'test_2', 'test_edge_2', 'TABLE_TO_TABLE', is_stale=True)
+
+        job_config = self.get_job_config()
+
         job = DefaultJob(
             conf=job_config,
             task=NeptuneStalenessRemovalTask()
         )
         job.launch()
-        stale_nodes = client.get_graph().V().has(self.key_name, 'test_2').toList()
-        stale_edges = client.get_graph().E().has(self.key_name, 'test_edge_2').toList()
+        stale_nodes = self.client.get_graph().V().has(self.key_name, 'test_2').toList()
+        stale_edges = self.client.get_graph().E().has(self.key_name, 'test_edge_2').toList()
         self.assertEqual(0, len(stale_nodes))
         self.assertEqual(0, len(stale_edges))
 

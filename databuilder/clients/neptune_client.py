@@ -1,6 +1,7 @@
 import requests
-import hashlib, hmac
-from typing import Union, Optional, Dict, Any
+import hashlib
+import hmac
+from typing import Union, Optional, Dict, Any, List, Tuple, Callable
 from datetime import datetime
 import urllib
 from databuilder.utils.aws4authwebsocket.transport import (
@@ -12,7 +13,7 @@ from gremlin_python.process.graph_traversal import (
     GraphTraversalSource,
     GraphTraversal
 )
-from gremlin_python.process.traversal import T, Order, gt, Cardinality, Column
+from gremlin_python.process.traversal import T, Column
 from gremlin_python.process.graph_traversal import __
 
 
@@ -244,16 +245,17 @@ class NeptuneSessionClient:
     def upsert_node(self, node_id, node_label, node_properties):
         # type: (str, str, Dict[str, Any]) -> None
         create_traversal = __.addV(node_label).property(T.id, node_id)
-        node_traversal = self._graph.V().hasId(node_id). \
+        node_traversal = self.get_graph().V().hasId(node_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 
         node_traversal = NeptuneSessionClient._update_entity_properties_on_traversal(node_traversal, node_properties)
         node_traversal.next()
 
-    def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties: Dict[str, Any]):
+    def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties):
+        # type: (str, str, str, str, Dict[str, Any]) -> None
         create_traversal = __.V(start_node_id).addE(edge_label).to(__.V(end_node_id)).property(T.id, edge_id)
-        edge_traversal = self._graph.V(start_node_id).outE(edge_label).hasId(edge_id). \
+        edge_traversal = self.get_graph().V(start_node_id).outE(edge_label).hasId(edge_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 
@@ -272,6 +274,56 @@ class NeptuneSessionClient:
             graph_traversal = graph_traversal.property(key, value)
 
         return graph_traversal
+
+    def get_all_edges_grouped_by_label(self, filter_properties=None):
+        # type: (Optional[List[Tuple[str, Any, Callable]]]) -> List[Dict[str, Any]]
+        if filter_properties is None:
+            filter_properties = []
+        tx = self.get_graph().E()
+        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+        return tx.groupCount().by(T.label).unfold(). \
+            project('type', 'count'). \
+            by(Column.keys). \
+            by(Column.values). \
+            toList()
+
+    def get_all_nodes_grouped_by_label_filtered(self, filter_properties=None):
+        # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
+        if filter_properties is None:
+            filter_properties = []
+        tx = self.get_graph().V()
+        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+        return tx.groupCount().by(T.label).unfold(). \
+            project('type', 'count'). \
+            by(Column.keys). \
+            by(Column.values). \
+            toList()
+
+    @staticmethod
+    def _filter_traversal(graph_traversal, filter_properties):
+        # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal
+        for filter_property in filter_properties:
+            (filter_property_name, filter_property_value, filter_operator) = filter_property
+            graph_traversal = graph_traversal.has(filter_property_name, filter_operator(filter_property_value))
+        return graph_traversal
+
+    def delete_edges(self, filter_properties, edge_labels):
+        # type: (List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
+        tx = self.get_graph().E()
+        if edge_labels:
+            tx = tx.hasLabel(*edge_labels)
+        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+
+        tx.drop().iterate()
+
+    def delete_nodes(self, filter_properties, node_labels):
+        # type: ( List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
+        tx = self.get_graph().V()
+        if node_labels:
+            tx = tx.hasLabel(*node_labels)
+        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+
+        tx.drop().iterate()
 
 
 

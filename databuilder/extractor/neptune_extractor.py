@@ -6,7 +6,6 @@ from typing import Any, Iterator, Union  # noqa: F401
 from pyhocon import ConfigTree, ConfigFactory  # noqa: F401
 
 from databuilder.extractor.base_extractor import Extractor
-from databuilder import neptune_client
 from databuilder.clients.neptune_client import NeptuneSessionClient
 from gremlin_python.process.graph_traversal import __
 from gremlin_python.process.traversal import T

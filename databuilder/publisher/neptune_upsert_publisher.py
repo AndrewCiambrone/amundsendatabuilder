@@ -1,13 +1,9 @@
-import datetime
-
 from csv import DictReader
-import os
 from os import listdir
 from os.path import isfile, join
 
 from databuilder.publisher.base_publisher import Publisher
-from databuilder.utils import s3_client
-from databuilder import neptune_client
+from databuilder.clients.neptune_client import NeptuneSessionClient
 
 
 class NeptuneUpsertPublisher(Publisher):
@@ -27,6 +23,7 @@ class NeptuneUpsertPublisher(Publisher):
 
     AWS_ACCESS_KEY = 'aws_access_key'
     AWS_SECRET_KEY = 'aws_secret_key'
+    AWS_SESSION_TOKEN = 'aws_session_token'
 
     def __init__(self):
         # type: () -> None
@@ -39,8 +36,16 @@ class NeptuneUpsertPublisher(Publisher):
         self.aws_region = conf.get_string(NeptuneUpsertPublisher.REGION)
         self.aws_access_key = conf.get_string(NeptuneUpsertPublisher.AWS_ACCESS_KEY)
         self.aws_secret_key = conf.get_string(NeptuneUpsertPublisher.AWS_SECRET_KEY)
-
+        self.aws_session_token = conf.get_string(NeptuneUpsertPublisher.AWS_SESSION_TOKEN, default=None)
         self.neptune_host = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_HOST)
+        self.neptune_session_client = NeptuneSessionClient(
+            neptune_host=self.neptune_host,
+            region=self.aws_region,
+            access_key=self.aws_access_key,
+            access_secret=self.aws_secret_key,
+            session_token=self.aws_session_token,
+        )
+
 
     def publish_impl(self):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]
@@ -63,46 +68,26 @@ class NeptuneUpsertPublisher(Publisher):
                     self.upsert_edge_row(row)
 
     def upsert_node_row(self, row):
-        auth_dict = {
-            'aws_access_key_id': self.aws_access_key,
-            'aws_secret_access_key': self.aws_secret_key,
-            'service_region': self.aws_region
-        }
-        g = neptune_client.get_graph(
-            host=self.neptune_host,
-            password=auth_dict,
-        )
         node_properties = {
             key: value
             for key, value in row.items()
             if key not in ['~id', '~label']
         }
         print('Upserting {} {}'.format(row['~label'], row['~id']))
-        neptune_client.upsert_node(
-            g=g,
+        self.neptune_session_client.upsert_node(
             node_id=row['~id'],
             node_label=row['~label'],
             node_properties=node_properties
         )
 
     def upsert_edge_row(self, row):
-        auth_dict = {
-            'aws_access_key_id': self.aws_access_key,
-            'aws_secret_access_key': self.aws_secret_key,
-            'service_region': self.aws_region
-        }
-        g = neptune_client.get_graph(
-            host=self.neptune_host,
-            password=auth_dict,
-        )
         edge_properties = {
             key: value
             for key, value in row.items()
             if key not in ['~id', '~label', '~to', '~from']
         }
         print('Upserting {} {}'.format(row['~label'], row['~id']))
-        neptune_client.upsert_edge(
-            g=g,
+        self.neptune_session_client.upsert_edge(
             start_node_id=row['~from'],
             end_node_id=row['~to'],
             edge_id=row['~id'],

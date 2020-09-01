@@ -7,7 +7,7 @@ from typing import Dict, Iterable, Any  # noqa: F401
 
 from databuilder import Scoped
 from databuilder.task.base_task import Task  # noqa: F401
-from databuilder import neptune_client
+from databuilder.clients.neptune_client import NeptuneSessionClient
 from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME,
     NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME,
@@ -74,17 +74,15 @@ class NeptuneStalenessRemovalTask(Task):
         self.staleness_pct_dict = conf.get(NeptuneStalenessRemovalTask.STALENESS_PCT_MAX_DICT)
         self.neptune_host = conf.get_string(NeptuneStalenessRemovalTask.NEPTUNE_HOST)
 
-        self.auth_dict = {
-            'aws_access_key_id': conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_KEY),
-            'aws_secret_access_key': conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET),
-            'service_region': conf.get_string(NeptuneStalenessRemovalTask.AWS_REGION),
-        }
-
         self.staleness_cut_off_in_seconds = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
-        self._driver = neptune_client.get_graph(
-            host=self.neptune_host,
-            password=self.auth_dict
+
+        self._driver = NeptuneSessionClient(
+            neptune_host=self.neptune_host,
+            region=self.aws_region,
+            access_secret=self.aws_secret_key,
+            access_key=self.aws_access_key,
+            session_token=self.aws_session_token
         )
 
     def run(self) -> None:
@@ -111,8 +109,7 @@ class NeptuneStalenessRemovalTask(Task):
             (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        neptune_client.delete_nodes(
-            g=self._driver,
+        self._driver.delete_nodes(
             filter_properties=filter_properties,
             node_labels=list(self.target_nodes)
         )
@@ -122,8 +119,7 @@ class NeptuneStalenessRemovalTask(Task):
             (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        neptune_client.delete_edges(
-            g=self._driver,
+        self._driver.delete_edges(
             filter_properties=filter_properties,
             edge_labels=list(self.target_relations)
         )
@@ -152,29 +148,28 @@ class NeptuneStalenessRemovalTask(Task):
 
     def _validate_node_staleness_pct(self):
         # type: () -> None
-
-        total_records = neptune_client.get_all_nodes_grouped_by_label(g=self._driver)
+        total_records = self._driver.get_all_nodes_grouped_by_label_filtered()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = neptune_client.get_all_nodes_grouped_by_label_filtered(
-            g=self._driver,
+        stale_records = self._driver.get_all_nodes_grouped_by_label_filtered(
             filter_properties=filter_properties
         )
-        self._validate_staleness_pct(total_records=total_records,
-                                     stale_records=stale_records,
-                                     types=self.target_nodes)
+        self._validate_staleness_pct(
+            total_records=total_records,
+            stale_records=stale_records,
+            types=self.target_nodes
+        )
 
     def _validate_relation_staleness_pct(self):
         # type: () -> None
-        total_records = neptune_client.get_all_edges_grouped_by_label(g=self._driver)
+        total_records = self._driver.get_all_edges_grouped_by_label()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = neptune_client.get_all_edges_grouped_by_label_filtered(
-            g=self._driver,
+        stale_records = self._driver.get_all_edges_grouped_by_label(
             filter_properties=filter_properties
         )
         self._validate_staleness_pct(total_records=total_records,

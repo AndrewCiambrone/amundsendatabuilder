@@ -70,7 +70,27 @@ class MergeTask(Task):
                  child_extractor_wrappers,
                  loader,
                  transformer=NoopTransformer()):
-        # type: (Extractor, Callable, Dict[str, Callable], Dict[str, Callable], List[ChildMergeTaskExtractorWrapper], Loader, Transformer) -> None
+        """
+        The merge task takes in a number of extractors and merges them into one Record. This can be used whenever your
+        data comes from multiple sources. The roles of the parent extractor is to be the final decider. If there are any
+        conflicts between the values on the parent extractor and the children extractors the parent value is chosen.
+
+        If a record exists in the children extractors but not the parent extractor that value is thrown away.
+
+        The transformer and loader work the same exact way as the base task.
+        :param parent_extractor: Main source of data to be merged against
+        :type parent_extractor: Extractor
+        :param parent_record_identifiers: The ids for the records associated with the merge task.
+        :type parent_record_identifiers: Callable
+        :param parent_record_property_name_getters: A callable for each property we are getting from the parent record.
+        :type parent_record_property_name_getters: Dict[str, Callable]
+        :param parent_record_property_name_setters:A callable for each property we are mutating on the parent record.
+        :type parent_record_property_name_setters:  Dict[str, Callable]
+        :param child_extractor_wrappers: Extra sources of data to load against
+        :type child_extractor_wrappers:
+        :type loader: List[ChildMergeTaskExtractorWrapper]
+        :type transformer: Transformer
+        """
         self.parent_extractor = parent_extractor
         self.parent_record_identifiers = parent_record_identifiers
         self.parent_record_property_name_getters = parent_record_property_name_getters

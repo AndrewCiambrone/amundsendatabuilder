@@ -3,6 +3,17 @@ import hashlib, hmac
 from typing import Union, Optional, Dict, Any
 from datetime import datetime
 import urllib
+from databuilder.utils.aws4authwebsocket.transport import (
+    Aws4AuthWebsocketTransport
+)
+from gremlin_python.process.anonymous_traversal import traversal
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.process.graph_traversal import (
+    GraphTraversalSource,
+    GraphTraversal
+)
+from gremlin_python.process.traversal import T, Order, gt, Cardinality, Column
+from gremlin_python.process.graph_traversal import __
 
 
 class BulkUploaderNeptuneClient:
@@ -191,3 +202,77 @@ class BulkUploaderNeptuneClient:
     def _sign(key, msg):
         # type: (str, str) -> str
         return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
+
+class NeptuneSessionClient:
+    def __init__(self, neptune_host, region, access_key, access_secret, session_token=None, websocket_options=None):
+        # type: (str, str, str, str, Optional[str], Optional[Dict[str, Any]]) -> NeptuneSessionClient
+        self.neptune_host = neptune_host
+        self.region = region
+        self.access_key = access_key
+        self.access_secret = access_secret
+        self.session_token = session_token
+        self.websocket_options = websocket_options
+        self._graph = None
+
+    def get_graph(self) -> GraphTraversalSource:
+        if self._graph is None:
+            self._create_graph_source()
+
+        return self._graph
+
+    def _create_graph_source(self) -> GraphTraversalSource:
+        def factory() -> Aws4AuthWebsocketTransport:
+            aws4auth_options = {}
+            if self.session_token:
+                aws4auth_options['session_token'] = self.session_token
+            return Aws4AuthWebsocketTransport(
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.access_secret,
+                service_region=self.region,
+                extra_aws4auth_options=aws4auth_options,
+                extra_websocket_options=self.websocket_options or {}
+            )
+        driver_remote_connection_options = {
+            'url': self.neptune_host,
+            'transport_factory': factory,
+            'traversal_source': 'g'
+        }
+
+        return traversal().withRemote(DriverRemoteConnection(**driver_remote_connection_options))
+
+    def upsert_node(self, node_id, node_label, node_properties):
+        # type: (str, str, Dict[str, Any]) -> None
+        create_traversal = __.addV(node_label).property(T.id, node_id)
+        node_traversal = self._graph.V().hasId(node_id). \
+            fold(). \
+            coalesce(__.unfold(), create_traversal)
+
+        node_traversal = NeptuneSessionClient._update_entity_properties_on_traversal(node_traversal, node_properties)
+        node_traversal.next()
+
+    def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties: Dict[str, Any]):
+        create_traversal = __.V(start_node_id).addE(edge_label).to(__.V(end_node_id)).property(T.id, edge_id)
+        edge_traversal = self._graph.V(start_node_id).outE(edge_label).hasId(edge_id). \
+            fold(). \
+            coalesce(__.unfold(), create_traversal)
+
+        edge_traversal = NeptuneSessionClient._update_entity_properties_on_traversal(edge_traversal, edge_properties)
+        edge_traversal.next()
+
+    @staticmethod
+    def _update_entity_properties_on_traversal(graph_traversal, properties):
+        # type: (GraphTraversal, Dict[str, Any]) -> GraphTraversal
+        for key, value in properties.items():
+            key_split = key.split(':')
+            key = key_split[0]
+            value_type = key_split[1]
+            if "Long" in value_type:
+                value = int(value)
+            graph_traversal = graph_traversal.property(key, value)
+
+        return graph_traversal
+
+
+
+

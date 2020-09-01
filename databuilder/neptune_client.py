@@ -3,7 +3,7 @@ from databuilder.utils.aws4authwebsocket.transport import Aws4AuthWebsocketTrans
 from gremlin_python.driver.driver_remote_connection import \
     DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
-from gremlin_python.process.graph_traversal import GraphTraversalSource,GraphTraversal
+from gremlin_python.process.graph_traversal import GraphTraversalSource, GraphTraversal
 from gremlin_python.process.traversal import T, Order, gt, Cardinality, Column
 from gremlin_python.process.graph_traversal import __
 
@@ -52,25 +52,6 @@ def upsert_edge(g, start_node_id, end_node_id, edge_id, edge_label, edge_propert
         edge_traversal = edge_traversal.property(key, value)
 
     edge_traversal.next()
-
-
-def get_table_info_for_search(g):
-    result = g.V().hasLabel('Table'). \
-        project('database', 'cluster', 'schema', 'schema_description', 'name', 'key', 'description', 'column_names', 'column_descriptions', 'total_usage', 'unique_usage', 'tags'). \
-        by(__.out('TABLE_OF').out('SCHEMA_OF').out('CLUSTER_OF').values('name')). \
-        by(__.out('TABLE_OF').out('SCHEMA_OF').values('name')). \
-        by(__.out('TABLE_OF').values('name')). \
-        by(__.coalesce(__.out('TABLE_OF').out('DESCRIPTION').values('description'), __.constant(''))). \
-        by('name'). \
-        by(T.id). \
-        by(__.coalesce(__.out('DESCRIPTION').values('description'), __.constant(''))). \
-        by(__.out('COLUMN').values('name').fold()). \
-        by(__.out('COLUMN').out('DESCRIPTION').values('description').fold()). \
-        by(__.coalesce(__.outE('READ_BY').values('read_count'), __.constant(0)).sum()). \
-        by(__.outE('READ_BY').count()). \
-        by(__.inE('TAG').outV().id().fold()). \
-        toList()
-    return result
 
 
 def get_all_edges_grouped_by_label(g):

@@ -1,7 +1,9 @@
-from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
-from databuilder.job.job import DefaultJob
-from pyhocon import ConfigFactory
 import os
+
+from pyhocon import ConfigFactory
+
+from databuilder.job.job import DefaultJob
+from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
 
 
 def create_remove_stale_data_job():

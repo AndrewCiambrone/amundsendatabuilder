@@ -2,9 +2,10 @@ from csv import DictReader
 from os import listdir
 from os.path import isfile, join
 
-from databuilder.publisher.base_publisher import Publisher
-from databuilder.clients.neptune_client import NeptuneSessionClient
 from gremlin_python.process.traversal import T
+
+from databuilder.clients.neptune_client import NeptuneSessionClient
+from databuilder.publisher.base_publisher import Publisher
 
 
 class NeptuneUpsertPublisher(Publisher):

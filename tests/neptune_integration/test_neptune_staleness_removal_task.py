@@ -1,11 +1,13 @@
 import unittest
 from datetime import datetime, timedelta
 
-from databuilder.clients.neptune_client import NeptuneSessionClient
-from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
 from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
 from gremlin_python.process.anonymous_traversal import traversal
 from mock import patch
+from pyhocon import ConfigFactory
+
+from databuilder.clients.neptune_client import NeptuneSessionClient
+from databuilder.job.job import DefaultJob
 from databuilder.serializers.neptune_serializer import (
     NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT,
     NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT,
@@ -13,8 +15,7 @@ from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT,
     NEPTUNE_CREATION_TYPE_JOB
 )
-from databuilder.job.job import DefaultJob
-from pyhocon import ConfigFactory
+from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
 
 
 def get_test_graph(self):

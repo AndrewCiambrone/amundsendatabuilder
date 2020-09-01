@@ -1,14 +1,14 @@
-import time
 import importlib
 import logging
+import time
 from typing import Any, Iterator, Union  # noqa: F401
 
-from pyhocon import ConfigTree, ConfigFactory  # noqa: F401
-
-from databuilder.extractor.base_extractor import Extractor
-from databuilder.clients.neptune_client import NeptuneSessionClient
 from gremlin_python.process.graph_traversal import __
 from gremlin_python.process.traversal import T
+from pyhocon import ConfigTree  # noqa: F401
+
+from databuilder.clients.neptune_client import NeptuneSessionClient
+from databuilder.extractor.base_extractor import Extractor
 
 LOGGER = logging.getLogger(__name__)
 

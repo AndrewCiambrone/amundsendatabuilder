@@ -1,20 +1,22 @@
-import requests
 import hashlib
 import hmac
-from typing import Union, Optional, Dict, Any, List, Tuple, Callable
-from datetime import datetime
 import urllib
-from databuilder.utils.aws4authwebsocket.transport import (
-    Aws4AuthWebsocketTransport
-)
-from gremlin_python.process.anonymous_traversal import traversal
+from datetime import datetime
+from typing import Union, Optional, Dict, Any, List, Tuple, Callable
+
+import requests
 from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.process.anonymous_traversal import traversal
 from gremlin_python.process.graph_traversal import (
     GraphTraversalSource,
     GraphTraversal
 )
-from gremlin_python.process.traversal import T, Column
 from gremlin_python.process.graph_traversal import __
+from gremlin_python.process.traversal import T, Column
+
+from databuilder.utils.aws4authwebsocket.transport import (
+    Aws4AuthWebsocketTransport
+)
 
 
 class BulkUploaderNeptuneClient:
@@ -325,7 +327,3 @@ class NeptuneSessionClient:
         tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
 
         tx.drop().iterate()
-
-
-
-

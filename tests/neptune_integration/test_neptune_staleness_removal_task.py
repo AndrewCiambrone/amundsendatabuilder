@@ -97,7 +97,6 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self._create_test_edge('test_1', 'test_2', 'test_edge_2', 'TABLE_TO_TABLE', is_stale=True)
 
         job_config = self.get_job_config()
-
         job = DefaultJob(
             conf=job_config,
             task=NeptuneStalenessRemovalTask()
@@ -112,8 +111,8 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self._create_test_node(node_id="test_1", node_label="Table", is_stale=True, is_user_created=True)
         self._create_test_node(node_id="test_2", node_label="Table", is_stale=True, is_user_created=True)
         self._create_test_edge('test_1', 'test_2', 'test_edge_1', 'TABLE_TO_TABLE', is_stale=True, is_user_created=True)
-        job_config = self.get_job_config()
 
+        job_config = self.get_job_config()
         job = DefaultJob(
             conf=job_config,
             task=NeptuneStalenessRemovalTask()
@@ -132,13 +131,14 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self._create_test_edge('test_1', 'test_2', 'test_edge_1', 'TABLE_TO_TABLE', is_stale=True)
         self._create_test_edge('test_1', 'test_2', 'test_edge_2', 'TABLE_TO_TABLE', is_stale=False)
         self._create_test_edge('test_4', 'test_3', 'test_edge_1', 'FRIENDS', is_stale=True)
-        job_config = self.get_job_config()
 
+        job_config = self.get_job_config()
         job = DefaultJob(
             conf=job_config,
             task=NeptuneStalenessRemovalTask()
         )
         job.launch()
+
         stale_nodes = self.client.get_graph().V().hasLabel("Table").toList()
         user_nodes = self.client.get_graph().V().hasLabel("User").toList()
         stale_edges = self.client.get_graph().E().has(self.key_name, 'test_edge_1').toList()
@@ -148,6 +148,17 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self.assertEqual(1, len(stale_edges))
         self.assertEqual(1, len(friend_edges))
 
+    def test_ensure_validation_works(self):
+        self._create_test_node(node_id="test_1", node_label="Table", is_stale=True)
+        self._create_test_node(node_id="test_2", node_label="Table", is_stale=True)
+
+        job_config = self.get_job_config()
+        job = DefaultJob(
+            conf=job_config,
+            task=NeptuneStalenessRemovalTask()
+        )
+        with self.assertRaises(Exception):
+            job.launch()
 
 
 if __name__ == '__main__':

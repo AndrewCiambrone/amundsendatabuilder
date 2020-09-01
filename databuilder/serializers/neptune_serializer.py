@@ -16,6 +16,7 @@ NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME = "last_seen_datetime"
 NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:Date".format(
     name=NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME
 )
+# Add a property showing where the the node or relationship comes from
 NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type"
 NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:String(single)".format(
     name=NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME

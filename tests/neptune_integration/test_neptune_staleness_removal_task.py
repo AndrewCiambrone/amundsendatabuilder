@@ -86,18 +86,13 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         )
 
     def test_successful_staleness_removal_task(self):
-
-
         # create a recent node
         self._create_test_node(node_id="test_1", node_label="Table")
-
         # create a Stale node
         self._create_test_node(node_id="test_2", node_label="Table", is_stale=True)
 
-
         # create a recent edge
         self._create_test_edge('test_1', 'test_2', 'test_edge_1', 'TABLE_TO_TABLE')
-
         # create a stale edge
         self._create_test_edge('test_1', 'test_2', 'test_edge_2', 'TABLE_TO_TABLE', is_stale=True)
 
@@ -113,6 +108,21 @@ class TestNeptuneStalenessRemovalTask(unittest.TestCase):
         self.assertEqual(0, len(stale_nodes))
         self.assertEqual(0, len(stale_edges))
 
+    def test_ensure_user_created_entities_are_not_deleted(self):
+        self._create_test_node(node_id="test_1", node_label="Table", is_stale=True, is_user_created=True)
+        self._create_test_node(node_id="test_2", node_label="Table", is_stale=True, is_user_created=True)
+        self._create_test_edge('test_1', 'test_2', 'test_edge_1', 'TABLE_TO_TABLE', is_stale=True, is_user_created=True)
+        job_config = self.get_job_config()
+
+        job = DefaultJob(
+            conf=job_config,
+            task=NeptuneStalenessRemovalTask()
+        )
+        job.launch()
+        stale_nodes = self.client.get_graph().V().has(self.key_name, 'test_1').toList()
+        stale_edges = self.client.get_graph().E().has(self.key_name, 'test_edge_1').toList()
+        self.assertEqual(1, len(stale_nodes))
+        self.assertEqual(1, len(stale_edges))
 
 
 if __name__ == '__main__':

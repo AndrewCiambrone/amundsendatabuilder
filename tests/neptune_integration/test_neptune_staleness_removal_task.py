@@ -1,12 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
 
-from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
-from gremlin_python.process.anonymous_traversal import traversal
-from mock import patch
 from pyhocon import ConfigFactory
 
-from databuilder.clients.neptune_client import NeptuneSessionClient
 from databuilder.job.job import DefaultJob
 from databuilder.serializers.neptune_serializer import (
     NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT,
@@ -16,36 +12,10 @@ from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_JOB
 )
 from databuilder.task.neptune_staleness_removal_task import NeptuneStalenessRemovalTask
+from tests.neptune_integration.base_neptune_session_client_test import BaseNeptuneSessionClientTestCase
 
 
-def get_test_graph(self):
-    local_testing_connection = DriverRemoteConnection('ws://localhost:8182/gremlin', 'g')
-    return traversal().withRemote(local_testing_connection)
-
-
-class TestNeptuneStalenessRemovalTask(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.patcher = patch.object(NeptuneSessionClient, '_create_graph_source', get_test_graph)
-        self.patcher.start()
-        self.key_name = 'key'
-        self.client = NeptuneSessionClient(
-            self.key_name,
-            'localhost',
-            'test',
-            'test',
-            'test'
-        )
-
-    def tearDown(self) -> None:
-        self._clear_graph()
-        self.patcher.stop()
-
-    def _clear_graph(self):
-        g = get_test_graph('test')
-        g.E().drop().iterate()
-        g.V().drop().iterate()
-
+class TestNeptuneStalenessRemovalTask(BaseNeptuneSessionClientTestCase):
     def get_job_config(self):
         target_relations = ['TABLE_TO_TABLE']
         target_nodes = ['Table']

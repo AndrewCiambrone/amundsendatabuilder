@@ -159,12 +159,12 @@ class NeptuneStalenessRemovalTask(Task):
 
     def _validate_node_staleness_pct(self):
         # type: () -> None
-        total_records = self._driver.get_all_nodes_grouped_by_label_filtered()
+        total_records = self._driver.get_number_of_nodes_grouped_by_label()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = self._driver.get_all_nodes_grouped_by_label_filtered(
+        stale_records = self._driver.get_number_of_nodes_grouped_by_label(
             filter_properties=filter_properties
         )
         self._validate_staleness_pct(
@@ -175,12 +175,12 @@ class NeptuneStalenessRemovalTask(Task):
 
     def _validate_relation_staleness_pct(self):
         # type: () -> None
-        total_records = self._driver.get_all_edges_grouped_by_label()
+        total_records = self._driver.get_number_of_edges_grouped_by_label()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = self._driver.get_all_edges_grouped_by_label(
+        stale_records = self._driver.get_number_of_edges_grouped_by_label(
             filter_properties=filter_properties
         )
         self._validate_staleness_pct(total_records=total_records,

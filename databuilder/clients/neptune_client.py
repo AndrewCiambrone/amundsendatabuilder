@@ -278,7 +278,7 @@ class NeptuneSessionClient:
 
         return graph_traversal
 
-    def get_all_edges_grouped_by_label(self, filter_properties=None):
+    def get_number_of_edges_grouped_by_label(self, filter_properties=None):
         # type: (Optional[List[Tuple[str, Any, Callable]]]) -> List[Dict[str, Any]]
         if filter_properties is None:
             filter_properties = []
@@ -290,7 +290,7 @@ class NeptuneSessionClient:
             by(Column.values). \
             toList()
 
-    def get_all_nodes_grouped_by_label_filtered(self, filter_properties=None):
+    def get_number_of_nodes_grouped_by_label(self, filter_properties=None):
         # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
         if filter_properties is None:
             filter_properties = []

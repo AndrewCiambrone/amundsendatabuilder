@@ -12,7 +12,7 @@ def create_remove_stale_data_job():
     neptune_port = os.getenv("NEPTUNE_PORT")
     neptune_host = "wss://{}:{}/gremlin".format(neptune_endpoint, neptune_port)
     target_relations = ['DESCRIPTION', 'DESCRIPTION_OF', 'COLUMN', 'COLUMN_OF', 'TABLE', 'TABLE_OF']
-    target_nodes = ['Table', 'User', 'Column', 'Programmatic_Description', "Schema"]
+    target_nodes = ['Table', 'Column', 'Programmatic_Description', "Schema"]
     job_config = ConfigFactory.from_dict({
         'task.remove_stale_data': {
             NeptuneStalenessRemovalTask.BATCH_SIZE: 1000,

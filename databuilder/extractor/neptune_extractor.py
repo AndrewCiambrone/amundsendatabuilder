@@ -35,6 +35,7 @@ class NeptuneExtractor(Extractor):
         self.aws_region = conf.get_string(NeptuneExtractor.REGION_CONFIG_KEY)
         self.neptune_host = conf.get_string(NeptuneExtractor.NEPTUNE_HOST_CONFIG_KEY)
         self._session_client = NeptuneSessionClient(
+            key_name=T.id,
             neptune_host=self.neptune_host,
             region=self.aws_region,
             access_secret=self.aws_secret_key,

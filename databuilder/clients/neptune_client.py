@@ -206,8 +206,9 @@ class BulkUploaderNeptuneClient:
 
 
 class NeptuneSessionClient:
-    def __init__(self, neptune_host, region, access_key, access_secret, session_token=None, websocket_options=None):
-        # type: (str, str, str, str, Optional[str], Optional[Dict[str, Any]]) -> NeptuneSessionClient
+    def __init__(self, key_name, neptune_host, region, access_key, access_secret, session_token=None, websocket_options=None):
+        # type: (str, str, str, str, str, Optional[str], Optional[Dict[str, Any]]) -> NeptuneSessionClient
+        self.key_name = key_name
         self.neptune_host = neptune_host
         self.region = region
         self.access_key = access_key
@@ -218,7 +219,7 @@ class NeptuneSessionClient:
 
     def get_graph(self) -> GraphTraversalSource:
         if self._graph is None:
-            self._create_graph_source()
+            self._graph = self._create_graph_source()
 
         return self._graph
 
@@ -244,8 +245,8 @@ class NeptuneSessionClient:
 
     def upsert_node(self, node_id, node_label, node_properties):
         # type: (str, str, Dict[str, Any]) -> None
-        create_traversal = __.addV(node_label).property(T.id, node_id)
-        node_traversal = self.get_graph().V().hasId(node_id). \
+        create_traversal = __.addV(node_label).property(self.key_name, node_id)
+        node_traversal = self.get_graph().V().has(self.key_name, node_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 
@@ -254,8 +255,8 @@ class NeptuneSessionClient:
 
     def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties):
         # type: (str, str, str, str, Dict[str, Any]) -> None
-        create_traversal = __.V(start_node_id).addE(edge_label).to(__.V(end_node_id)).property(T.id, edge_id)
-        edge_traversal = self.get_graph().V(start_node_id).outE(edge_label).hasId(edge_id). \
+        create_traversal = __.V().has(self.key_name, start_node_id).addE(edge_label).to(__.V().has(self.key_name, end_node_id)).property(self.key_name, edge_id)
+        edge_traversal = self.get_graph().V().has(self.key_name, start_node_id).outE(edge_label).has(self.key_name, edge_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 

@@ -4,6 +4,7 @@ from os.path import isfile, join
 
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.clients.neptune_client import NeptuneSessionClient
+from gremlin_python.process.traversal import T
 
 
 class NeptuneUpsertPublisher(Publisher):
@@ -39,6 +40,7 @@ class NeptuneUpsertPublisher(Publisher):
         self.aws_session_token = conf.get_string(NeptuneUpsertPublisher.AWS_SESSION_TOKEN, default=None)
         self.neptune_host = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_HOST)
         self.neptune_session_client = NeptuneSessionClient(
+            key_name=T.id,
             neptune_host=self.neptune_host,
             region=self.aws_region,
             access_key=self.aws_access_key,

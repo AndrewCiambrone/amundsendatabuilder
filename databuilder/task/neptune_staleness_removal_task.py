@@ -16,6 +16,7 @@ from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_JOB
 )
 from gremlin_python.process import traversal
+from gremlin_python.process.traversal import T
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,11 +34,14 @@ class NeptuneStalenessRemovalTask(Task):
     NEPTUNE_HOST = 'neptune_host'
     AWS_ACCESS_KEY = 'aws_access_key'
     AWS_ACCESS_SECRET = 'aws_access_secret'
+    AWS_SESSION_TOKEN = 'aws_session_token'
     AWS_REGION = 'aws_region'
     TARGET_NODES = "target_nodes"
     TARGET_RELATIONS = "target_relations"
     BATCH_SIZE = "batch_size"
     DRY_RUN = "dry_run"
+    # What is the property name that uniquely identifies each node and edge. Typically is T.id for neptune
+    NEPTUNE_KEY_PROPERTY_NAME = "neptune_key_name"
     # Staleness max percentage. Safety net to prevent majority of data being deleted.
     STALENESS_MAX_PCT = "staleness_max_pct"
     # Staleness max percentage per LABEL/TYPE. Safety net to prevent majority of data being deleted.
@@ -45,6 +49,7 @@ class NeptuneStalenessRemovalTask(Task):
     # Sets how old the nodes and relationships can be
     STALENESS_CUT_OFF_IN_SECONDS = "staleness_cut_off_in_seconds"
     DEFAULT_CONFIG = ConfigFactory.from_dict({
+        NEPTUNE_KEY_PROPERTY_NAME: T.id,
         BATCH_SIZE: 100,
         STALENESS_MAX_PCT: 5,
         TARGET_NODES: [],
@@ -73,11 +78,17 @@ class NeptuneStalenessRemovalTask(Task):
         self.staleness_pct = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_MAX_PCT)
         self.staleness_pct_dict = conf.get(NeptuneStalenessRemovalTask.STALENESS_PCT_MAX_DICT)
         self.neptune_host = conf.get_string(NeptuneStalenessRemovalTask.NEPTUNE_HOST)
+        self.key_name = conf.get(NeptuneStalenessRemovalTask.NEPTUNE_KEY_PROPERTY_NAME)
+        self.aws_region = conf.get_string(NeptuneStalenessRemovalTask.AWS_REGION)
+        self.aws_secret_key = conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET)
+        self.aws_access_key = conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_KEY)
+        self.aws_session_token = conf.get_string(NeptuneStalenessRemovalTask.AWS_SESSION_TOKEN, default=None)
 
         self.staleness_cut_off_in_seconds = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
 
         self._driver = NeptuneSessionClient(
+            key_name=self.key_name,
             neptune_host=self.neptune_host,
             region=self.aws_region,
             access_secret=self.aws_secret_key,

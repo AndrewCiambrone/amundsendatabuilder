@@ -278,32 +278,8 @@ class NeptuneSessionClient:
 
         return graph_traversal
 
-    def get_number_of_edges_grouped_by_label(self, filter_properties=None):
-        # type: (Optional[List[Tuple[str, Any, Callable]]]) -> List[Dict[str, Any]]
-        if filter_properties is None:
-            filter_properties = []
-        tx = self.get_graph().E()
-        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
-        return tx.groupCount().by(T.label).unfold(). \
-            project('type', 'count'). \
-            by(Column.keys). \
-            by(Column.values). \
-            toList()
-
-    def get_number_of_nodes_grouped_by_label(self, filter_properties=None):
-        # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
-        if filter_properties is None:
-            filter_properties = []
-        tx = self.get_graph().V()
-        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
-        return tx.groupCount().by(T.label).unfold(). \
-            project('type', 'count'). \
-            by(Column.keys). \
-            by(Column.values). \
-            toList()
-
     @staticmethod
-    def _filter_traversal(graph_traversal, filter_properties):
+    def filter_traversal(graph_traversal, filter_properties):
         # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal
         for filter_property in filter_properties:
             (filter_property_name, filter_property_value, filter_operator) = filter_property
@@ -315,7 +291,7 @@ class NeptuneSessionClient:
         tx = self.get_graph().E()
         if edge_labels:
             tx = tx.hasLabel(*edge_labels)
-        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
 
         tx.drop().iterate()
 
@@ -324,6 +300,6 @@ class NeptuneSessionClient:
         tx = self.get_graph().V()
         if node_labels:
             tx = tx.hasLabel(*node_labels)
-        tx = NeptuneSessionClient._filter_traversal(tx, filter_properties)
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
 
         tx.drop().iterate()

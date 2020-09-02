@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from pyhocon import ConfigFactory  # noqa: F401
 from pyhocon import ConfigTree  # noqa: F401
-from typing import Dict, Iterable, Any  # noqa: F401
+from typing import Dict, Iterable, Any, List, Tuple, Callable  # noqa: F401
 
 from databuilder import Scoped
 from databuilder.task.base_task import Task  # noqa: F401
@@ -16,7 +16,7 @@ from databuilder.serializers.neptune_serializer import (
     NEPTUNE_CREATION_TYPE_JOB
 )
 from gremlin_python.process import traversal
-from gremlin_python.process.traversal import T
+from gremlin_python.process.traversal import T, Column
 
 LOGGER = logging.getLogger(__name__)
 
@@ -159,12 +159,12 @@ class NeptuneStalenessRemovalTask(Task):
 
     def _validate_node_staleness_pct(self):
         # type: () -> None
-        total_records = self._driver.get_number_of_nodes_grouped_by_label()
+        total_records = self.get_number_of_nodes_grouped_by_label()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = self._driver.get_number_of_nodes_grouped_by_label(
+        stale_records = self.get_number_of_nodes_grouped_by_label(
             filter_properties=filter_properties
         )
         self._validate_staleness_pct(
@@ -173,14 +173,38 @@ class NeptuneStalenessRemovalTask(Task):
             types=self.target_nodes
         )
 
+    def get_number_of_nodes_grouped_by_label(self, filter_properties=None):
+        # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
+        if filter_properties is None:
+            filter_properties = []
+        tx = self._driver.get_graph().V()
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
+        tx = tx.groupCount().by(T.label).unfold()
+        tx = tx.project('type', 'count')
+        tx = tx.by(Column.keys)
+        tx = tx.by(Column.values)
+        return tx.toList()
+
+    def get_number_of_edges_grouped_by_label(self, filter_properties=None):
+        # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
+        if filter_properties is None:
+            filter_properties = []
+        tx = self.get_graph().E()
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
+        tx = tx.groupCount().by(T.label).unfold()
+        tx = tx.project('type', 'count')
+        tx = tx.by(Column.keys)
+        tx = tx.by(Column.values)
+        return tx.toList()
+
     def _validate_relation_staleness_pct(self):
         # type: () -> None
-        total_records = self._driver.get_number_of_edges_grouped_by_label()
+        total_records = self.get_number_of_edges_grouped_by_label()
         filter_properties = [
             (NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME, NEPTUNE_CREATION_TYPE_JOB, traversal.eq),
             (NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME, self.cutoff_datetime, traversal.lt)
         ]
-        stale_records = self._driver.get_number_of_edges_grouped_by_label(
+        stale_records = self.get_number_of_edges_grouped_by_label(
             filter_properties=filter_properties
         )
         self._validate_staleness_pct(total_records=total_records,

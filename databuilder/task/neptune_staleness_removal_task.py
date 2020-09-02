@@ -189,7 +189,7 @@ class NeptuneStalenessRemovalTask(Task):
         # type: (List[Tuple[str, Any, Callable]]) -> List[Dict[str, Any]]
         if filter_properties is None:
             filter_properties = []
-        tx = self.get_graph().E()
+        tx = self._driver.get_graph().E()
         tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
         tx = tx.groupCount().by(T.label).unfold()
         tx = tx.project('type', 'count')

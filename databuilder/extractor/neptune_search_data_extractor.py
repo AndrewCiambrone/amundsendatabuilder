@@ -20,6 +20,9 @@ from databuilder.models.cluster.cluster_constants import (
     CLUSTER_REVERSE_RELATION_TYPE
 )
 from databuilder import Scoped
+from databuilder.serializers.neptune_serializer import (
+    NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME
+)
 
 
 class NeptuneSearchDataExtractor(Extractor):
@@ -47,7 +50,8 @@ class NeptuneSearchDataExtractor(Extractor):
             'column_descriptions',
             'total_usage',
             'unique_usage',
-            'tags'
+            'tags',
+            'last_updated_timestamp'
         )
         traversal = traversal.by(db_traversal.values('name'))  # database
         traversal = traversal.by(cluster_traversal.values('name'))  # cluster
@@ -72,6 +76,7 @@ class NeptuneSearchDataExtractor(Extractor):
         )  # total_usage
         traversal = traversal.by(__.outE(ColumnUsageModel.TABLE_USER_RELATION_TYPE).count())  # unique_usage
         traversal = traversal.by(__.inE(TableMetadata.TAG_TABLE_RELATION_TYPE).outV().id().fold())  # tags
+        traversal = traversal.by(__.coalesce(__.values(NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME)))  # last_updated_timestamp
         return traversal.toList()
 
     DEFAULT_QUERY_BY_ENTITY = {
@@ -112,7 +117,6 @@ class NeptuneSearchDataExtractor(Extractor):
             self.results = self.DEFAULT_QUERY_BY_ENTITY[self.entity]()
 
         for result in self.results:
-            result['last_updated_timestamp'] = int(time.time())
             result['badges'] = []
             result['display_name'] = None
             result['programmatic_descriptions'] = []

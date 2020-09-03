@@ -27,11 +27,7 @@ class TestNeptuneStalenessRemovalTask(BaseNeptuneSessionClientTestCase):
                 NeptuneStalenessRemovalTask.TARGET_RELATIONS: target_relations,
                 NeptuneStalenessRemovalTask.TARGET_NODES: target_nodes,
                 NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS: 86400,  # 1 day
-                NeptuneStalenessRemovalTask.STALENESS_MAX_PCT: 75,
-                NeptuneStalenessRemovalTask.NEPTUNE_HOST: 'localhost',
-                NeptuneStalenessRemovalTask.AWS_REGION: 'autozone',
-                NeptuneStalenessRemovalTask.AWS_ACCESS_KEY: self.key_name,
-                NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET: 'super_secret_key'
+                NeptuneStalenessRemovalTask.STALENESS_MAX_PCT: 75
             }
         })
 

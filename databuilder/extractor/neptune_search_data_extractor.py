@@ -25,68 +25,70 @@ from databuilder.serializers.neptune_serializer import (
 )
 
 
+def _table_search_query(neptune_client):
+    # type: (NeptuneSessionClient) -> List[Any]
+    graph = neptune_client.get_graph()
+    schema_traversal = __.out(TableMetadata.TABLE_SCHEMA_RELATION_TYPE)
+    cluster_traversal = schema_traversal.clone().out(SCHEMA_REVERSE_RELATION_TYPE)
+    db_traversal = cluster_traversal.clone().out(CLUSTER_REVERSE_RELATION_TYPE)
+    column_traversal = __.out(TableMetadata.TABLE_COL_RELATION_TYPE)
+    traversal = graph.V().hasLabel(TableMetadata.TABLE_NODE_LABEL)
+    traversal = traversal.project(
+        'database',
+        'cluster',
+        'schema',
+        'schema_description',
+        'name',
+        'key',
+        'description',
+        'column_names',
+        'column_descriptions',
+        'total_usage',
+        'unique_usage',
+        'tags',
+        'last_updated_timestamp'
+    )
+    traversal = traversal.by(db_traversal.values('name'))  # database
+    traversal = traversal.by(cluster_traversal.values('name'))  # cluster
+    traversal = traversal.by(schema_traversal.clone().values('name'))  # schema
+    traversal = traversal.by(__.coalesce(
+        schema_traversal.clone().out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description'),
+        __.constant(''))
+    )  # schema_description
+    traversal = traversal.by('name')  # name
+    traversal = traversal.by(neptune_client.id_property_name)  # key
+    traversal = traversal.by(__.coalesce(
+        __.out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description'),
+        __.constant(''))
+    )  # description
+    traversal = traversal.by(column_traversal.clone().values('name').fold())  # column_names
+    traversal = traversal.by(
+        column_traversal.clone().out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description').fold()
+    )  # column_descriptions
+    traversal = traversal.by(__.coalesce(
+        __.outE(ColumnUsageModel.TABLE_USER_RELATION_TYPE).values('read_count'),
+        __.constant(0)).sum()
+    )  # total_usage
+    traversal = traversal.by(__.outE(ColumnUsageModel.TABLE_USER_RELATION_TYPE).count())  # unique_usage
+    traversal = traversal.by(__.inE(TableMetadata.TAG_TABLE_RELATION_TYPE).outV().id().fold())  # tags
+    traversal = traversal.by(NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME)  # last_updated_timestamp
+    return traversal.toList()
+
+
 class NeptuneSearchDataExtractor(Extractor):
 
-    ENTITY_TYPE = 'entity_type'
-    GREMLIN_QUERY_CONFIG_KEY = 'cypher_query'
-
-    def _table_search_query(self):
-        # type: () -> List[Any]
-        graph = self._session_client.get_graph()
-        schema_traversal = __.out(TableMetadata.TABLE_SCHEMA_RELATION_TYPE)
-        cluster_traversal = schema_traversal.out(SCHEMA_REVERSE_RELATION_TYPE)
-        db_traversal = cluster_traversal.out(CLUSTER_REVERSE_RELATION_TYPE)
-        column_traversal = __.out(TableMetadata.TABLE_COL_RELATION_TYPE)
-        traversal = graph.V().hasLabel(TableMetadata.TABLE_NODE_LABEL)
-        traversal = traversal.project(
-            'database',
-            'cluster',
-            'schema',
-            'schema_description',
-            'name',
-            'key',
-            'description',
-            'column_names',
-            'column_descriptions',
-            'total_usage',
-            'unique_usage',
-            'tags',
-            'last_updated_timestamp'
-        )
-        traversal = traversal.by(db_traversal.values('name'))  # database
-        traversal = traversal.by(cluster_traversal.values('name'))  # cluster
-        traversal = traversal.by(schema_traversal.values('name'))  # schema
-        traversal = traversal.by(__.coalesce(
-            schema_traversal.out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description'),
-            __.constant(''))
-        )  # schema_description
-        traversal = traversal.by('name')  # name
-        traversal = traversal.by(self._session_client.id_property_name)  # key
-        traversal = traversal.by(__.coalesce(
-            __.out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description'),
-            __.constant(''))
-        )  # description
-        traversal = traversal.by(column_traversal.values('name').fold())  # column_names
-        traversal = traversal.by(
-            column_traversal.out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description').fold()
-        )  # column_descriptions
-        traversal = traversal.by(__.coalesce(
-            __.outE(ColumnUsageModel.TABLE_USER_RELATION_TYPE).values('read_count'),
-            __.constant(0)).sum()
-        )  # total_usage
-        traversal = traversal.by(__.outE(ColumnUsageModel.TABLE_USER_RELATION_TYPE).count())  # unique_usage
-        traversal = traversal.by(__.inE(TableMetadata.TAG_TABLE_RELATION_TYPE).outV().id().fold())  # tags
-        traversal = traversal.by(__.coalesce(__.values(NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME)))  # last_updated_timestamp
-        return traversal.toList()
+    ENTITY_TYPE_CONFIG_KEY = 'entity_type'
+    MODEL_CLASS_CONFIG_KEY = 'model_class'
 
     DEFAULT_QUERY_BY_ENTITY = {
-        'table': _table_search_query
+        'table': _table_search_query,
     }
 
     def init(self, conf):
         # type: (ConfigTree) -> None
         self.conf = conf
-        self.entity = conf.get_string(NeptuneSearchDataExtractor.ENTITY_TYPE, default='table').lower()
+        self.entity = conf.get_string(NeptuneSearchDataExtractor.ENTITY_TYPE_CONFIG_KEY, default='table').lower()
+        self.model_class = conf.get_string(NeptuneSearchDataExtractor.MODEL_CLASS_CONFIG_KEY, default=None)
 
         self._session_client = NeptuneSessionClient()
         neptune_client_conf = Scoped.get_scoped_conf(conf, self._session_client.get_scope())
@@ -97,7 +99,7 @@ class NeptuneSearchDataExtractor(Extractor):
 
     def close(self):
         # type: () -> Any
-        self.neptune_extractor.close()
+        self._session_client.close()
 
     def extract(self):
         # type: () -> Any
@@ -114,7 +116,7 @@ class NeptuneSearchDataExtractor(Extractor):
 
     def _get_extract_iter(self):
         if not self.results:
-            self.results = self.DEFAULT_QUERY_BY_ENTITY[self.entity]()
+            self.results = self.DEFAULT_QUERY_BY_ENTITY[self.entity](self._session_client)
 
         for result in self.results:
             result['badges'] = []

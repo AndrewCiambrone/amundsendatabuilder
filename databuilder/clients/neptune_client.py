@@ -212,7 +212,7 @@ class BulkUploaderNeptuneClient:
 class NeptuneSessionClient(Scoped):
     # What property is used to local nodes and edges by ids
     GRAPH_ID_PROPERTY_NAME = 'graph_id_property_name'
-    # Neptune host name <url>:<port>
+    # Neptune host name wss://<url>:<port>/gremlin
     NEPTUNE_HOST_NAME = 'neptune_host_name'
     # AWS Region the Neptune cluster is located
     AWS_REGION = 'aws_region'
@@ -237,7 +237,7 @@ class NeptuneSessionClient(Scoped):
     def init(self, conf):
         # type: (ConfigTree) -> None
         conf = conf.with_fallback(NeptuneSessionClient.DEFAULT_CONFIG)
-        self.id_property_name = conf.get_string(NeptuneSessionClient.GRAPH_ID_PROPERTY_NAME)
+        self.id_property_name = conf.get(NeptuneSessionClient.GRAPH_ID_PROPERTY_NAME)
         self.neptune_host = conf.get_string(NeptuneSessionClient.NEPTUNE_HOST_NAME)
         self.region = conf.get_string(NeptuneSessionClient.AWS_REGION)
         self.access_key = conf.get_string(NeptuneSessionClient.AWS_ACCESS_KEY)

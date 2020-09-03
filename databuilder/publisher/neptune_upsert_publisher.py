@@ -6,6 +6,7 @@ from gremlin_python.process.traversal import T
 
 from databuilder.clients.neptune_client import NeptuneSessionClient
 from databuilder.publisher.base_publisher import Publisher
+from databuilder import Scoped
 
 
 class NeptuneUpsertPublisher(Publisher):
@@ -35,20 +36,9 @@ class NeptuneUpsertPublisher(Publisher):
         self.node_files_dir = conf.get_string(NeptuneUpsertPublisher.NODE_FILES_DIR)
         self.relation_files_dir = conf.get_string(NeptuneUpsertPublisher.RELATION_FILES_DIR)
 
-        self.aws_region = conf.get_string(NeptuneUpsertPublisher.REGION)
-        self.aws_access_key = conf.get_string(NeptuneUpsertPublisher.AWS_ACCESS_KEY)
-        self.aws_secret_key = conf.get_string(NeptuneUpsertPublisher.AWS_SECRET_KEY)
-        self.aws_session_token = conf.get_string(NeptuneUpsertPublisher.AWS_SESSION_TOKEN, default=None)
-        self.neptune_host = conf.get_string(NeptuneUpsertPublisher.NEPTUNE_HOST)
-        self.neptune_session_client = NeptuneSessionClient(
-            key_name=T.id,
-            neptune_host=self.neptune_host,
-            region=self.aws_region,
-            access_key=self.aws_access_key,
-            access_secret=self.aws_secret_key,
-            session_token=self.aws_session_token,
-        )
-
+        self.neptune_session_client = NeptuneSessionClient()
+        neptune_client_conf = Scoped.get_scoped_conf(conf, self._session_client.get_scope())
+        self.neptune_session_client.init(neptune_client_conf)
 
     def publish_impl(self):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

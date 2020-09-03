@@ -2,9 +2,8 @@ from typing import Any, List  # noqa: F401
 
 from pyhocon import ConfigTree  # noqa: F401
 
-from databuilder import Scoped
+import time
 from databuilder.extractor.base_extractor import Extractor
-from databuilder.extractor.neptune_extractor import NeptuneExtractor
 from gremlin_python.process.graph_traversal import __
 from databuilder.clients.neptune_client import NeptuneSessionClient
 from databuilder.models.table_metadata import (
@@ -20,6 +19,7 @@ from databuilder.models.schema.schema_constant import (
 from databuilder.models.cluster.cluster_constants import (
     CLUSTER_REVERSE_RELATION_TYPE
 )
+from databuilder import Scoped
 
 
 class NeptuneSearchDataExtractor(Extractor):
@@ -27,14 +27,14 @@ class NeptuneSearchDataExtractor(Extractor):
     ENTITY_TYPE = 'entity_type'
     GREMLIN_QUERY_CONFIG_KEY = 'cypher_query'
 
-    def _table_search_query(self, session_client):
-        # type: (NeptuneSessionClient) -> List[Any]
+    def _table_search_query(self):
+        # type: () -> List[Any]
         graph = self._session_client.get_graph()
         schema_traversal = __.out(TableMetadata.TABLE_SCHEMA_RELATION_TYPE)
         cluster_traversal = schema_traversal.out(SCHEMA_REVERSE_RELATION_TYPE)
         db_traversal = cluster_traversal.out(CLUSTER_REVERSE_RELATION_TYPE)
         column_traversal = __.out(TableMetadata.TABLE_COL_RELATION_TYPE)
-        traversal = graph.hasLabel(TableMetadata.TABLE_NODE_LABEL)
+        traversal = graph.V().hasLabel(TableMetadata.TABLE_NODE_LABEL)
         traversal = traversal.project(
             'database',
             'cluster',
@@ -57,7 +57,7 @@ class NeptuneSearchDataExtractor(Extractor):
             __.constant(''))
         )  # schema_description
         traversal = traversal.by('name')  # name
-        traversal = traversal.by(session_client.key_name)  # key
+        traversal = traversal.by(self._session_client.id_property_name)  # key
         traversal = traversal.by(__.coalesce(
             __.out(DescriptionMetadata.DESCRIPTION_RELATION_TYPE).values('description'),
             __.constant(''))
@@ -82,16 +82,13 @@ class NeptuneSearchDataExtractor(Extractor):
         # type: (ConfigTree) -> None
         self.conf = conf
         self.entity = conf.get_string(NeptuneSearchDataExtractor.ENTITY_TYPE, default='table').lower()
-        if NeptuneSearchDataExtractor.GREMLIN_QUERY_CONFIG_KEY in conf:
-            self.gremlin_query = conf.get_string(NeptuneSearchDataExtractor.GREMLIN_QUERY_CONFIG_KEY)
-        else:
-            self.gremlin_query = NeptuneSearchDataExtractor.DEFAULT_QUERY_BY_ENTITY[self.entity]
 
-        self.neptune_extractor = NeptuneExtractor()
-        key = self.neptune_extractor.get_scope() + '.' + NeptuneExtractor.GREMLIN_QUERY_CONFIG_KEY
-        self.conf.put(key, self.gremlin_query)
+        self._session_client = NeptuneSessionClient()
+        neptune_client_conf = Scoped.get_scoped_conf(conf, self._session_client.get_scope())
+        self._session_client.init(neptune_client_conf)
 
-        self.neptune_extractor.init(Scoped.get_scoped_conf(self.conf, self.neptune_extractor.get_scope()))
+        self._extract_iter = None
+        self.results = None
 
     def close(self):
         # type: () -> Any
@@ -102,7 +99,29 @@ class NeptuneSearchDataExtractor(Extractor):
         """
         Invoke extract() method defined by neptune_extractor
         """
-        return self.neptune_extractor.extract()
+        if not self._extract_iter:
+            self._extract_iter = self._get_extract_iter()
+
+        try:
+            return next(self._extract_iter)
+        except StopIteration:
+            return None
+
+    def _get_extract_iter(self):
+        if not self.results:
+            self.results = self.DEFAULT_QUERY_BY_ENTITY[self.entity]()
+
+        for result in self.results:
+            result['last_updated_timestamp'] = int(time.time())
+            result['badges'] = []
+            result['display_name'] = None
+            result['programmatic_descriptions'] = []
+
+            if hasattr(self, 'model_class'):
+                obj = self.model_class(**result)
+                yield obj
+            else:
+                yield result
 
     def get_scope(self):
         # type: () -> str

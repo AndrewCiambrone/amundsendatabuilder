@@ -17,6 +17,8 @@ from gremlin_python.process.traversal import T, Column
 from databuilder.utils.aws4authwebsocket.transport import (
     Aws4AuthWebsocketTransport
 )
+from databuilder import Scoped
+from pyhocon import ConfigFactory, ConfigTree  # noqa: F401
 
 
 class BulkUploaderNeptuneClient:
@@ -207,17 +209,44 @@ class BulkUploaderNeptuneClient:
         return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
 
 
-class NeptuneSessionClient:
-    def __init__(self, key_name, neptune_host, region, access_key, access_secret, session_token=None, websocket_options=None):
-        # type: (str, str, str, str, str, Optional[str], Optional[Dict[str, Any]]) -> NeptuneSessionClient
-        self.key_name = key_name
-        self.neptune_host = neptune_host
-        self.region = region
-        self.access_key = access_key
-        self.access_secret = access_secret
-        self.session_token = session_token
-        self.websocket_options = websocket_options
-        self._graph = None
+class NeptuneSessionClient(Scoped):
+    # What property is used to local nodes and edges by ids
+    GRAPH_ID_PROPERTY_NAME = 'graph_id_property_name'
+    # Neptune host name <url>:<port>
+    NEPTUNE_HOST_NAME = 'neptune_host_name'
+    # AWS Region the Neptune cluster is located
+    AWS_REGION = 'aws_region'
+    AWS_ACCESS_KEY = 'aws_access_key'
+    AWS_ACCESS_SECRET = 'aws_access_secret'
+    AWS_SESSION_TOKEN = 'aws_session_token'
+
+    WEBSOCKET_OPTIONS = 'websocket_options'
+
+    DEFAULT_CONFIG = ConfigFactory.from_dict(
+        {
+            GRAPH_ID_PROPERTY_NAME: T.id,
+            AWS_SESSION_TOKEN: None,
+            WEBSOCKET_OPTIONS: {},
+        }
+    )
+
+    def __init__(self):
+        # type: () -> NeptuneSessionClient
+        self._graph: Optional[GraphTraversalSource] = None
+
+    def init(self, conf):
+        # type: (ConfigTree) -> None
+        conf = conf.with_fallback(NeptuneSessionClient.DEFAULT_CONFIG)
+        self.id_property_name = conf.get_string(NeptuneSessionClient.GRAPH_ID_PROPERTY_NAME)
+        self.neptune_host = conf.get_string(NeptuneSessionClient.NEPTUNE_HOST_NAME)
+        self.region = conf.get_string(NeptuneSessionClient.AWS_REGION)
+        self.access_key = conf.get_string(NeptuneSessionClient.AWS_ACCESS_KEY)
+        self.access_secret = conf.get_string(NeptuneSessionClient.AWS_ACCESS_SECRET)
+        self.session_token = conf.get_string(NeptuneSessionClient.AWS_SESSION_TOKEN)
+        self.websocket_options = conf.get(NeptuneSessionClient.WEBSOCKET_OPTIONS)
+
+    def get_scope(self):
+        return 'neptune.client'
 
     def get_graph(self) -> GraphTraversalSource:
         if self._graph is None:
@@ -247,8 +276,8 @@ class NeptuneSessionClient:
 
     def upsert_node(self, node_id, node_label, node_properties):
         # type: (str, str, Dict[str, Any]) -> None
-        create_traversal = __.addV(node_label).property(self.key_name, node_id)
-        node_traversal = self.get_graph().V().has(self.key_name, node_id). \
+        create_traversal = __.addV(node_label).property(self.id_property_name, node_id)
+        node_traversal = self.get_graph().V().has(self.id_property_name, node_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 
@@ -257,8 +286,8 @@ class NeptuneSessionClient:
 
     def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties):
         # type: (str, str, str, str, Dict[str, Any]) -> None
-        create_traversal = __.V().has(self.key_name, start_node_id).addE(edge_label).to(__.V().has(self.key_name, end_node_id)).property(self.key_name, edge_id)
-        edge_traversal = self.get_graph().V().has(self.key_name, start_node_id).outE(edge_label).has(self.key_name, edge_id). \
+        create_traversal = __.V().has(self.id_property_name, start_node_id).addE(edge_label).to(__.V().has(self.id_property_name, end_node_id)).property(self.id_property_name, edge_id)
+        edge_traversal = self.get_graph().V().has(self.id_property_name, start_node_id).outE(edge_label).has(self.id_property_name, edge_id). \
             fold(). \
             coalesce(__.unfold(), create_traversal)
 

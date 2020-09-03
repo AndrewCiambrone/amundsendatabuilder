@@ -77,24 +77,12 @@ class NeptuneStalenessRemovalTask(Task):
         self.dry_run = conf.get_bool(NeptuneStalenessRemovalTask.DRY_RUN)
         self.staleness_pct = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_MAX_PCT)
         self.staleness_pct_dict = conf.get(NeptuneStalenessRemovalTask.STALENESS_PCT_MAX_DICT)
-        self.neptune_host = conf.get_string(NeptuneStalenessRemovalTask.NEPTUNE_HOST)
-        self.key_name = conf.get(NeptuneStalenessRemovalTask.NEPTUNE_KEY_PROPERTY_NAME)
-        self.aws_region = conf.get_string(NeptuneStalenessRemovalTask.AWS_REGION)
-        self.aws_secret_key = conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_SECRET)
-        self.aws_access_key = conf.get_string(NeptuneStalenessRemovalTask.AWS_ACCESS_KEY)
-        self.aws_session_token = conf.get_string(NeptuneStalenessRemovalTask.AWS_SESSION_TOKEN, default=None)
 
         self.staleness_cut_off_in_seconds = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
-
-        self._driver = NeptuneSessionClient(
-            key_name=self.key_name,
-            neptune_host=self.neptune_host,
-            region=self.aws_region,
-            access_secret=self.aws_secret_key,
-            access_key=self.aws_access_key,
-            session_token=self.aws_session_token
-        )
+        self._driver = NeptuneSessionClient()
+        neptune_client_conf = Scoped.get_scoped_conf(conf, self._driver.get_scope())
+        self._driver.init(neptune_client_conf)
 
     def run(self) -> None:
         """

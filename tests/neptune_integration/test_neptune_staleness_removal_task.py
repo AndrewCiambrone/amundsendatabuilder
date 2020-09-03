@@ -19,8 +19,10 @@ class TestNeptuneStalenessRemovalTask(BaseNeptuneSessionClientTestCase):
     def get_job_config(self):
         target_relations = ['TABLE_TO_TABLE']
         target_nodes = ['Table']
+        self.conf.get(self.client.get_scope())
         return ConfigFactory.from_dict({
             'task.remove_stale_data': {
+                self.client.get_scope(): self.conf.get(self.client.get_scope()),
                 NeptuneStalenessRemovalTask.BATCH_SIZE: 1000,
                 NeptuneStalenessRemovalTask.TARGET_RELATIONS: target_relations,
                 NeptuneStalenessRemovalTask.TARGET_NODES: target_nodes,

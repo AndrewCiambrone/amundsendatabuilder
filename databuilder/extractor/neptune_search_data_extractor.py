@@ -2,7 +2,8 @@ from typing import Any, List  # noqa: F401
 
 from pyhocon import ConfigTree  # noqa: F401
 
-import time
+import datetime
+import importlib
 from databuilder.extractor.base_extractor import Extractor
 from gremlin_python.process.graph_traversal import __
 from databuilder.clients.neptune_client import NeptuneSessionClient
@@ -88,7 +89,11 @@ class NeptuneSearchDataExtractor(Extractor):
         # type: (ConfigTree) -> None
         self.conf = conf
         self.entity = conf.get_string(NeptuneSearchDataExtractor.ENTITY_TYPE_CONFIG_KEY, default='table').lower()
-        self.model_class = conf.get_string(NeptuneSearchDataExtractor.MODEL_CLASS_CONFIG_KEY, default=None)
+        model_class = conf.get_string(NeptuneSearchDataExtractor.MODEL_CLASS_CONFIG_KEY, default=None)
+        if model_class:
+            module_name, class_name = model_class.rsplit(".", 1)
+            mod = importlib.import_module(module_name)
+            self.model_class = getattr(mod, class_name)
 
         self._session_client = NeptuneSessionClient()
         neptune_client_conf = Scoped.get_scoped_conf(conf, self._session_client.get_scope())
@@ -122,6 +127,8 @@ class NeptuneSearchDataExtractor(Extractor):
             result['badges'] = []
             result['display_name'] = None
             result['programmatic_descriptions'] = []
+            if isinstance(result.get('last_updated_timestamp'), datetime.datetime):
+                result['last_updated_timestamp'] = int(result.get('last_updated_timestamp').timestamp())
 
             if hasattr(self, 'model_class'):
                 obj = self.model_class(**result)

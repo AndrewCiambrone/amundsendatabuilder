@@ -1,8 +1,24 @@
-import requests
-import hashlib, hmac
-from typing import Union, Optional, Dict, Any
-from datetime import datetime
+import hashlib
+import hmac
 import urllib
+from datetime import datetime
+from typing import Union, Optional, Dict, Any, List, Tuple, Callable
+
+import requests
+from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
+from gremlin_python.process.anonymous_traversal import traversal
+from gremlin_python.process.graph_traversal import (
+    GraphTraversalSource,
+    GraphTraversal
+)
+from gremlin_python.process.graph_traversal import __
+from gremlin_python.process.traversal import T, Column
+
+from databuilder.utils.aws4authwebsocket.transport import (
+    Aws4AuthWebsocketTransport
+)
+from databuilder import Scoped
+from pyhocon import ConfigFactory, ConfigTree  # noqa: F401
 
 
 class BulkUploaderNeptuneClient:
@@ -191,3 +207,128 @@ class BulkUploaderNeptuneClient:
     def _sign(key, msg):
         # type: (str, str) -> str
         return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
+
+class NeptuneSessionClient(Scoped):
+    # What property is used to local nodes and edges by ids
+    GRAPH_ID_PROPERTY_NAME = 'graph_id_property_name'
+    # Neptune host name wss://<url>:<port>/gremlin
+    NEPTUNE_HOST_NAME = 'neptune_host_name'
+    # AWS Region the Neptune cluster is located
+    AWS_REGION = 'aws_region'
+    AWS_ACCESS_KEY = 'aws_access_key'
+    AWS_ACCESS_SECRET = 'aws_access_secret'
+    AWS_SESSION_TOKEN = 'aws_session_token'
+
+    WEBSOCKET_OPTIONS = 'websocket_options'
+
+    DEFAULT_CONFIG = ConfigFactory.from_dict(
+        {
+            GRAPH_ID_PROPERTY_NAME: T.id,
+            AWS_SESSION_TOKEN: None,
+            WEBSOCKET_OPTIONS: {},
+        }
+    )
+
+    def __init__(self):
+        # type: () -> NeptuneSessionClient
+        self._graph: Optional[GraphTraversalSource] = None
+
+    def init(self, conf):
+        # type: (ConfigTree) -> None
+        conf = conf.with_fallback(NeptuneSessionClient.DEFAULT_CONFIG)
+        self.id_property_name = conf.get(NeptuneSessionClient.GRAPH_ID_PROPERTY_NAME)
+        self.neptune_host = conf.get_string(NeptuneSessionClient.NEPTUNE_HOST_NAME)
+        self.region = conf.get_string(NeptuneSessionClient.AWS_REGION)
+        self.access_key = conf.get_string(NeptuneSessionClient.AWS_ACCESS_KEY)
+        self.access_secret = conf.get_string(NeptuneSessionClient.AWS_ACCESS_SECRET)
+        self.session_token = conf.get_string(NeptuneSessionClient.AWS_SESSION_TOKEN)
+        self.websocket_options = conf.get(NeptuneSessionClient.WEBSOCKET_OPTIONS)
+
+    def get_scope(self):
+        return 'neptune.client'
+
+    def get_graph(self) -> GraphTraversalSource:
+        if self._graph is None:
+            self._graph = self._create_graph_source()
+
+        return self._graph
+
+    def _create_graph_source(self) -> GraphTraversalSource:
+        def factory() -> Aws4AuthWebsocketTransport:
+            aws4auth_options = {}
+            if self.session_token:
+                aws4auth_options['session_token'] = self.session_token
+            return Aws4AuthWebsocketTransport(
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.access_secret,
+                service_region=self.region,
+                extra_aws4auth_options=aws4auth_options,
+                extra_websocket_options=self.websocket_options or {}
+            )
+        driver_remote_connection_options = {
+            'url': self.neptune_host,
+            'transport_factory': factory,
+            'traversal_source': 'g'
+        }
+
+        return traversal().withRemote(DriverRemoteConnection(**driver_remote_connection_options))
+
+    def upsert_node(self, node_id, node_label, node_properties):
+        # type: (str, str, Dict[str, Any]) -> None
+        create_traversal = __.addV(node_label).property(self.id_property_name, node_id)
+        node_traversal = self.get_graph().V().has(self.id_property_name, node_id). \
+            fold(). \
+            coalesce(__.unfold(), create_traversal)
+
+        node_traversal = NeptuneSessionClient._update_entity_properties_on_traversal(node_traversal, node_properties)
+        node_traversal.next()
+
+    def upsert_edge(self, start_node_id, end_node_id, edge_id, edge_label, edge_properties):
+        # type: (str, str, str, str, Dict[str, Any]) -> None
+        create_traversal = __.V().has(self.id_property_name, start_node_id).addE(edge_label).to(__.V().has(self.id_property_name, end_node_id)).property(self.id_property_name, edge_id)
+        edge_traversal = self.get_graph().V().has(self.id_property_name, start_node_id).outE(edge_label).has(self.id_property_name, edge_id). \
+            fold(). \
+            coalesce(__.unfold(), create_traversal)
+
+        edge_traversal = NeptuneSessionClient._update_entity_properties_on_traversal(edge_traversal, edge_properties)
+        edge_traversal.next()
+
+    @staticmethod
+    def _update_entity_properties_on_traversal(graph_traversal, properties):
+        # type: (GraphTraversal, Dict[str, Any]) -> GraphTraversal
+        for key, value in properties.items():
+            key_split = key.split(':')
+            key = key_split[0]
+            value_type = key_split[1]
+            if "Long" in value_type:
+                value = int(value)
+            graph_traversal = graph_traversal.property(key, value)
+
+        return graph_traversal
+
+    @staticmethod
+    def filter_traversal(graph_traversal, filter_properties):
+        # type: (GraphTraversal, List[Tuple[str, Any, Callable]]) -> GraphTraversal
+        for filter_property in filter_properties:
+            (filter_property_name, filter_property_value, filter_operator) = filter_property
+            graph_traversal = graph_traversal.has(filter_property_name, filter_operator(filter_property_value))
+        return graph_traversal
+
+    def delete_edges(self, filter_properties, edge_labels):
+        # type: (List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
+        tx = self.get_graph().E()
+        if edge_labels:
+            tx = tx.hasLabel(*edge_labels)
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
+
+        tx.drop().iterate()
+
+    def delete_nodes(self, filter_properties, node_labels):
+        # type: ( List[Tuple[str, Any, Callable]], Optional[List[str]]) -> None
+        tx = self.get_graph().V()
+        if node_labels:
+            tx = tx.hasLabel(*node_labels)
+        tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
+
+        tx.drop().iterate()

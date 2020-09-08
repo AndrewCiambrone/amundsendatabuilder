@@ -7,10 +7,24 @@ from databuilder.models.graph_node import GraphNode
 
 NEPTUNE_HEADER_ID = "~id"
 NEPTUNE_HEADER_LABEL = "~label"
-NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME = "last_seen_datetime:Date(single)"
-NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME = "last_seen_datetime:Date"
-NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type:String(single)"
-NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME = "creation_type:String"
+# last seen property names
+NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME = "last_seen_datetime"
+NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:Date(single)".format(
+    name=NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME
+)
+NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME = "last_seen_datetime"
+NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:Date".format(
+    name=NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME
+)
+# Add a property showing where the the node or relationship comes from
+NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME = "creation_type"
+NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:String(single)".format(
+    name=NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME
+)
+NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME = "creation_type"
+NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT = "{name}:String".format(
+    name=NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME
+)
 
 NEPTUNE_CREATION_TYPE_JOB = "job"
 
@@ -36,8 +50,8 @@ def convert_relationship(relationship):
         NEPTUNE_RELATIONSHIP_HEADER_FROM: relationship.start_key,
         NEPTUNE_RELATIONSHIP_HEADER_TO: relationship.end_key,
         NEPTUNE_HEADER_LABEL: relationship.type,
-        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time,
-        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
+        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: current_string_time,
+        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB
     }
 
     reverse_relationship_doc = {
@@ -45,8 +59,8 @@ def convert_relationship(relationship):
         NEPTUNE_RELATIONSHIP_HEADER_FROM: relationship.end_key,
         NEPTUNE_RELATIONSHIP_HEADER_TO: relationship.start_key,
         NEPTUNE_HEADER_LABEL: relationship.reverse_type,
-        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME: current_string_time,
-        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
+        NEPTUNE_LAST_SEEN_AT_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: current_string_time,
+        NEPTUNE_CREATION_TYPE_EDGE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB
     }
 
     for key, value in relationship.relationship_attributes.items():
@@ -70,8 +84,8 @@ def convert_node(node):
     node_dict = {
         NEPTUNE_HEADER_ID: node.id,
         NEPTUNE_HEADER_LABEL: node.label,
-        NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME: current_string_time,
-        NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME: NEPTUNE_CREATION_TYPE_JOB
+        NEPTUNE_LAST_SEEN_AT_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: current_string_time,
+        NEPTUNE_CREATION_TYPE_NODE_PROPERTY_NAME_BULK_LOADER_FORMAT: NEPTUNE_CREATION_TYPE_JOB
     }
 
     for attr_key, attr_value in node.node_attributes.items():

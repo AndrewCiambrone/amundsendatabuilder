@@ -50,7 +50,7 @@ class PostgresTableUsageExtractor(Extractor):
         return 'extractor.postgres_table_usage'
 
     def _get_extract_iter(self):
-        # type: () -> Iterator[User]
+        # type: () -> Iterator[ColumnUsageModel]
         """
         :return:
         """

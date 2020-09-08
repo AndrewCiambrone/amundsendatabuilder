@@ -31,17 +31,12 @@ class NeptuneStalenessRemovalTask(Task):
     """
 
     # Config keys
-    NEPTUNE_HOST = 'neptune_host'
-    AWS_ACCESS_KEY = 'aws_access_key'
-    AWS_ACCESS_SECRET = 'aws_access_secret'
-    AWS_SESSION_TOKEN = 'aws_session_token'
-    AWS_REGION = 'aws_region'
     TARGET_NODES = "target_nodes"
     TARGET_RELATIONS = "target_relations"
     BATCH_SIZE = "batch_size"
     DRY_RUN = "dry_run"
     # What is the property name that uniquely identifies each node and edge. Typically is T.id for neptune
-    NEPTUNE_KEY_PROPERTY_NAME = "neptune_key_name"
+    GRAPH_ID_PROPERTY_NAME = "graph_id_property_name"
     # Staleness max percentage. Safety net to prevent majority of data being deleted.
     STALENESS_MAX_PCT = "staleness_max_pct"
     # Staleness max percentage per LABEL/TYPE. Safety net to prevent majority of data being deleted.
@@ -49,7 +44,7 @@ class NeptuneStalenessRemovalTask(Task):
     # Sets how old the nodes and relationships can be
     STALENESS_CUT_OFF_IN_SECONDS = "staleness_cut_off_in_seconds"
     DEFAULT_CONFIG = ConfigFactory.from_dict({
-        NEPTUNE_KEY_PROPERTY_NAME: T.id,
+        GRAPH_ID_PROPERTY_NAME: T.id,
         BATCH_SIZE: 100,
         STALENESS_MAX_PCT: 5,
         TARGET_NODES: [],
@@ -77,7 +72,7 @@ class NeptuneStalenessRemovalTask(Task):
         self.dry_run = conf.get_bool(NeptuneStalenessRemovalTask.DRY_RUN)
         self.staleness_pct = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_MAX_PCT)
         self.staleness_pct_dict = conf.get(NeptuneStalenessRemovalTask.STALENESS_PCT_MAX_DICT)
-
+        self.graph_id = conf.get(NeptuneStalenessRemovalTask.GRAPH_ID_PROPERTY_NAME)
         self.staleness_cut_off_in_seconds = conf.get_int(NeptuneStalenessRemovalTask.STALENESS_CUT_OFF_IN_SECONDS)
         self.cutoff_datetime = datetime.utcnow() - timedelta(seconds=self.staleness_cut_off_in_seconds)
         self._driver = NeptuneSessionClient()
@@ -167,7 +162,7 @@ class NeptuneStalenessRemovalTask(Task):
             filter_properties = []
         tx = self._driver.get_graph().V()
         tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
-        tx = tx.groupCount().by(T.label).unfold()
+        tx = tx.groupCount().by(self.graph_id).unfold()
         tx = tx.project('type', 'count')
         tx = tx.by(Column.keys)
         tx = tx.by(Column.values)
@@ -179,7 +174,7 @@ class NeptuneStalenessRemovalTask(Task):
             filter_properties = []
         tx = self._driver.get_graph().E()
         tx = NeptuneSessionClient.filter_traversal(tx, filter_properties)
-        tx = tx.groupCount().by(T.label).unfold()
+        tx = tx.groupCount().by(self.graph_id).unfold()
         tx = tx.project('type', 'count')
         tx = tx.by(Column.keys)
         tx = tx.by(Column.values)

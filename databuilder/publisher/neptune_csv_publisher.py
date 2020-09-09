@@ -88,7 +88,10 @@ class NeptuneCSVPublisher(Publisher):
         print(status)
 
     def _is_upload_required(self):
-        return len(self.node_files_dir) > 0 or len(self.relation_files_dir) > 0
+        node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]
+        edge_names = [join(self.relation_files_dir, f) for f in listdir(self.relation_files_dir) if isfile(join(self.relation_files_dir, f))]
+        file_names = node_names + edge_names
+        return len(file_names) > 0
 
     def upload_files(self, s3_folder_location):
         node_names = [join(self.node_files_dir, f) for f in listdir(self.node_files_dir) if isfile(join(self.node_files_dir, f))]

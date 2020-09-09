@@ -63,6 +63,12 @@ class BulkUploaderNeptuneClient:
         if not status:
             print("Ran into Error")
             print(repr(status_response))
+            raise Exception("Ran into error bulk loading")
+
+        if status == "LOAD_FAILED":
+            print(repr(status_response))
+            raise Exception("Ran into error bulk loading")
+
         return status != 'LOAD_IN_PROGRESS', status
 
     def get_status_on_bulk_loader(self, load_id):

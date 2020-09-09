@@ -14,15 +14,15 @@ class GithubClient:
             "Accept": "application/vnd.github.v3+json"
         }
 
-    def get_all_file_urls_in_directory(self, repo_name, directory):
+    def get_all_file_urls_in_directory(self, repo_name, directory, recurse=True):
         # type: (str, str) -> List[str]
         try:
-            return self._get_all_file_urls_in_directory(repo_name, directory)
+            return self._get_all_file_urls_in_directory(repo_name, directory, recurse=recurse)
         except Exception as e:
             # handle unknown exception
             raise e
 
-    def _get_all_file_urls_in_directory(self, repo_name,  directory):
+    def _get_all_file_urls_in_directory(self, repo_name,  directory, recurse=True):
         # type: (str, str) -> List[str]
         file_urls = []
         url = 'https://api.github.com/repos/{org_name}/{repo_name}/contents/{directory}'.format(
@@ -38,9 +38,10 @@ class GithubClient:
         )
         response_json = response.json()
         for file_object in response_json:
-            if _is_file_object_a_directory(file_object):
+            if _is_file_object_a_directory(file_object) and recurse:
                 file_object_path = file_object['path']
-                subdirectory_files = self._get_all_file_urls_in_directory(repo_name, file_object_path)
+                subdirectory_files = self._get_all_file_urls_in_directory(
+                    repo_name, file_object_path, recurse=recurse)
                 file_urls.extend(subdirectory_files)
             elif _is_file_object_a_file(file_object):
                 file_object_url = file_object.get('download_url')

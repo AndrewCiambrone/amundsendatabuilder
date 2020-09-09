@@ -24,6 +24,7 @@ class GithubFileExtractor(Extractor):
     REPO_NAME = 'repo_name'
     REPO_DIRECTORY = 'repo_directory'
     EXPECTED_FILE_EXTENSIONS = 'expected_file_extensions'
+    RECURSE = 'recurse'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
@@ -33,6 +34,7 @@ class GithubFileExtractor(Extractor):
         self.github_access_token = conf.get_string(self.GITHUB_ACCESS_TOKEN)
         self.repo_directory = conf.get_string(self.REPO_DIRECTORY)
         self.repo_name = conf.get_string(self.REPO_NAME)
+        self.recurse = conf.get_bool(self.RECURSE, default=True)
         self._client = GithubClient(
             organization_name=self.github_org_name,
             github_username=self.github_user_name,
@@ -66,7 +68,8 @@ class GithubFileExtractor(Extractor):
         if not self.file_urls:
             self.file_urls = self._client.get_all_file_urls_in_directory(
                 self.repo_name,
-                self.repo_directory
+                self.repo_directory,
+                recurse=self.recurse
             )
             self.file_urls = iter([file_url for file_url in self.file_urls if self.wanted_file_type(file_url)])
 

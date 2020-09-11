@@ -1,6 +1,6 @@
 import requests
 from requests.auth import HTTPBasicAuth
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 
 class GithubClient:
@@ -15,7 +15,10 @@ class GithubClient:
         }
 
     def get_all_file_urls_in_directory(self, repo_name, directory, recurse=True):
-        # type: (str, str) -> List[str]
+        """
+        :return: List like [(filename, download_url)]
+        """
+        # type: (str, str) -> List[Tuple[str, str, str]]
         try:
             return self._get_all_file_urls_in_directory(repo_name, directory, recurse=recurse)
         except Exception as e:
@@ -23,7 +26,10 @@ class GithubClient:
             raise e
 
     def _get_all_file_urls_in_directory(self, repo_name,  directory, recurse=True):
-        # type: (str, str) -> List[str]
+        """
+        :return: List like [(filename, download_url)]
+        """
+        # type: (str, str) -> List[Tuple[str, str, str]]
         file_urls = []
         url = 'https://api.github.com/repos/{org_name}/{repo_name}/contents/{directory}'.format(
             org_name=self.organization_name,
@@ -36,6 +42,7 @@ class GithubClient:
             headers=self._request_headers,
             auth=self._request_auth
         )
+        response.raise_for_status()
         response_json = response.json()
         for file_object in response_json:
             if _is_file_object_a_directory(file_object) and recurse:
@@ -44,8 +51,10 @@ class GithubClient:
                     repo_name, file_object_path, recurse=recurse)
                 file_urls.extend(subdirectory_files)
             elif _is_file_object_a_file(file_object):
+                file_path = file_object['path']
+                file_name = file_object['name']
                 file_object_url = file_object.get('download_url')
-                file_urls.append(file_object_url)
+                file_urls.append((file_name, file_path, file_object_url))
 
         return file_urls
 

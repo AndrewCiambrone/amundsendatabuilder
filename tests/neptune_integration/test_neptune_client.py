@@ -3,8 +3,8 @@ import unittest
 from tests.neptune_integration.base_neptune_session_client_test import BaseNeptuneSessionClientTestCase, get_test_graph
 from gremlin_python.process import traversal
 
-class TestNeptuneClient(BaseNeptuneSessionClientTestCase):
 
+class TestNeptuneClient(BaseNeptuneSessionClientTestCase):
     def test_upsert_node(self):
         self.client.upsert_node('test_1', 'label', {
             'name:String(single)': "Name1"

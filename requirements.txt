@@ -67,3 +67,4 @@ websocket-client==0.56.0
 requests-aws4auth==0.9
 mocket==3.7.3
 lkml==0.2.2
+freezegun==0.1.9

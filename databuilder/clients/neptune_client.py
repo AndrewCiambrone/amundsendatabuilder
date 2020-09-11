@@ -12,7 +12,7 @@ from gremlin_python.process.graph_traversal import (
     GraphTraversal
 )
 from gremlin_python.process.graph_traversal import __
-from gremlin_python.process.traversal import T, Column
+from gremlin_python.process.traversal import T
 
 from databuilder.utils.aws4authwebsocket.transport import (
     Aws4AuthWebsocketTransport
@@ -23,7 +23,7 @@ from pyhocon import ConfigFactory, ConfigTree  # noqa: F401
 
 class BulkUploaderNeptuneClient:
     def __init__(self, neptune_host, region, access_key, access_secret, arn, session_token=None):
-        # type: (str, str, str, str, Union[str, None]) -> None
+        # type: (str, str, str, str, str, Union[str, None]) -> None
         assert access_key
         assert access_secret
         assert access_key != access_secret
@@ -58,6 +58,7 @@ class BulkUploaderNeptuneClient:
         return load_id
 
     def is_bulk_status_job_done(self, load_id):
+        # type: (str) -> Tuple[bool, str]
         status_response = self.get_status_on_bulk_loader(load_id)
         status = status_response.get('payload', {}).get('overallStatus', {}).get('status')
         if not status:
@@ -72,6 +73,7 @@ class BulkUploaderNeptuneClient:
         return status != 'LOAD_IN_PROGRESS', status
 
     def get_status_on_bulk_loader(self, load_id):
+        # type: (str) -> Dict[str, Any]
         query_params = {
             'loadId': load_id,
             'errors': True,

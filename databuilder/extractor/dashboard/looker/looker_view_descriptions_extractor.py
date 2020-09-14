@@ -54,7 +54,7 @@ class LookerViewDescriptionsExtractor(Extractor):
         """
         :return:
         """
-        for file_contents in self._get_raw_extract_iter():
+        for (name, path, file_contents) in self._get_raw_extract_iter():
             try:
                 model = lkml.load(file_contents)
             except Exception as e:
@@ -96,9 +96,9 @@ class LookerViewDescriptionsExtractor(Extractor):
         :return:
         """
         try:
-            file_contents = next(self._github_file_extractor.extract())
-            while file_contents:
-                yield file_contents
-                file_contents = next(self._github_file_extractor.extract())
+            result = self._github_file_extractor.extract()
+            while result:
+                yield result
+                result = self._github_file_extractor.extract()
         except StopIteration:
             return None

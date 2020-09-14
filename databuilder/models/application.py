@@ -13,13 +13,12 @@ class Application(Neo4jCsvSerializable):
     """
 
     APPLICATION_LABEL = 'Application'
-    APPLICATION_KEY_FORMAT = 'application://{cluster}.airflow/{dag}/{task}'
+    APPLICATION_KEY_FORMAT = 'application://{cluster}.{app_name}/{dag}/{task}'
     APPLICATION_URL_NAME = 'application_url'
     APPLICATION_NAME = 'name'
     APPLICATION_ID = 'id'
     APPLICATION_ID_FORMAT = '{dag_id}/{task_id}'
     APPLICATION_DESCRIPTION = 'description'
-    APPLICATION_TYPE = 'Airflow'
 
     APPLICATION_TABLE_RELATION_TYPE = 'GENERATES'
     TABLE_APPLICATION_RELATION_TYPE = 'DERIVED_FROM'
@@ -32,14 +31,15 @@ class Application(Neo4jCsvSerializable):
                  cluster='gold',  # type: str
                  schema='',  # type: str
                  table_name='',  # type: str
-                 exec_date='',  # type: str
+                 app_name='Airflow',  # type: str
                  ):
         # type: (...) -> None
         self.task = task_id
 
         # todo: need to modify this hack
         self.application_url = application_url_template.format(dag_id=dag_id)
-        self.database, self.cluster, self.schema, self.table = db_name, cluster, schema, table_name
+        self.database, self.cluster, self.schema, self.table, self.app_name = \
+            db_name, cluster, schema, table_name, app_name
 
         self.dag = dag_id
 
@@ -73,8 +73,9 @@ class Application(Neo4jCsvSerializable):
         # type: (...) -> str
         # returns formatting string for application of type dag
         return Application.APPLICATION_KEY_FORMAT.format(cluster=self.cluster,
+                                                         app_name=self.app_name,
                                                          dag=self.dag,
-                                                         task=self.task)
+                                                         task=self.task).lower()
 
     def create_nodes(self):
         # type: () -> List[GraphNode]
@@ -83,8 +84,8 @@ class Application(Neo4jCsvSerializable):
         :return:
         """
         results = []
-        application_description = '{app_type} with id {id}'.format(
-            app_type=Application.APPLICATION_TYPE,
+        application_description = '{app_name} with id {id}'.format(
+            app_name=self.app_name,
             id=Application.APPLICATION_ID_FORMAT.format(dag_id=self.dag, task_id=self.task)
         )
         application_id = Application.APPLICATION_ID_FORMAT.format(
@@ -96,7 +97,7 @@ class Application(Neo4jCsvSerializable):
             label=Application.APPLICATION_LABEL,
             node_attributes={
                 Application.APPLICATION_URL_NAME: self.application_url,
-                Application.APPLICATION_NAME: Application.APPLICATION_TYPE,
+                Application.APPLICATION_NAME: self.app_name,
                 Application.APPLICATION_DESCRIPTION: application_description,
                 Application.APPLICATION_ID: application_id
             }

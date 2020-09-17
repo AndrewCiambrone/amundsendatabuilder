@@ -1,10 +1,8 @@
 import unittest
+
 from databuilder.models.application import Application
-
-from databuilder.models.neo4j_csv_serde import NODE_KEY, \
-    NODE_LABEL, RELATION_START_KEY, RELATION_START_LABEL, RELATION_END_KEY, \
-    RELATION_END_LABEL, RELATION_TYPE, RELATION_REVERSE_TYPE
-
+from databuilder.models.graph_node import GraphNode
+from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.table_metadata import TableMetadata
 
 
@@ -18,25 +16,29 @@ class TestApplication(unittest.TestCase):
                                        dag_id='event_test',
                                        schema='default',
                                        table_name='test_table',
+                                       app_name='Airflow',
                                        application_url_template='airflow_host.net/admin/airflow/tree?dag_id={dag_id}')
 
-        self.expected_node_result = {
-            NODE_KEY: 'application://gold.airflow/event_test/hive.default.test_table',
-            NODE_LABEL: 'Application',
-            'application_url': 'airflow_host.net/admin/airflow/tree?dag_id=event_test',
-            'id': 'event_test/hive.default.test_table',
-            'name': 'Airflow',
-            'description': 'Airflow with id event_test/hive.default.test_table'
-        }
+        self.expected_node_result = GraphNode(
+            id='application://gold.airflow/event_test/hive.default.test_table',
+            label='Application',
+            node_attribute ={
+                'application_url': 'airflow_host.net/admin/airflow/tree?dag_id=event_test',
+                'id': 'event_test/hive.default.test_table',
+                'name': 'Airflow',
+                'description': 'Airflow with id event_test/hive.default.test_table'
+            }
+        )
 
-        self.expected_relation_result = {
-            RELATION_START_KEY: 'hive://gold.default/test_table',
-            RELATION_START_LABEL: TableMetadata.TABLE_NODE_LABEL,
-            RELATION_END_KEY: 'application://gold.airflow/event_test/hive.default.test_table',
-            RELATION_END_LABEL: 'Application',
-            RELATION_TYPE: 'DERIVED_FROM',
-            RELATION_REVERSE_TYPE: 'GENERATES'
-        }
+        self.expected_relation_result = GraphRelationship(
+            start_key='hive://gold.default/test_table',
+            start_label=TableMetadata.TABLE_NODE_LABEL,
+            end_key='application://gold.airflow/event_test/hive.default.test_table',
+            end_label='Application',
+            type='DERIVED_FROM',
+            reverse_type='GENERATES',
+            relationship_attributes={}
+        )
 
     def test_create_next_node(self):
         # type: () -> None
@@ -56,7 +58,7 @@ class TestApplication(unittest.TestCase):
     def test_get_application_model_key(self):
         # type: () -> None
         application = self.application.get_application_model_key()
-        self.assertEquals(application, self.expected_node_result[NODE_KEY])
+        self.assertEquals(application, self.expected_node_result.id)
 
     def test_create_nodes(self):
         # type: () -> None

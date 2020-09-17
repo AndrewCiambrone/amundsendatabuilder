@@ -1,6 +1,6 @@
 import logging
 import importlib
-from typing import Iterator, Any, Union  # noqa: F401
+from typing import Iterator, Any, Union, Tuple  # noqa: F401
 from urllib.parse import urlparse
 
 from pyhocon import ConfigTree  # noqa: F401
@@ -24,6 +24,7 @@ class GithubFileExtractor(Extractor):
     REPO_NAME = 'repo_name'
     REPO_DIRECTORY = 'repo_directory'
     EXPECTED_FILE_EXTENSIONS = 'expected_file_extensions'
+    RECURSE = 'recurse'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
@@ -33,6 +34,7 @@ class GithubFileExtractor(Extractor):
         self.github_access_token = conf.get_string(self.GITHUB_ACCESS_TOKEN)
         self.repo_directory = conf.get_string(self.REPO_DIRECTORY)
         self.repo_name = conf.get_string(self.REPO_NAME)
+        self.recurse = conf.get_bool(self.RECURSE, default=True)
         self._client = GithubClient(
             organization_name=self.github_org_name,
             github_username=self.github_user_name,
@@ -45,30 +47,32 @@ class GithubFileExtractor(Extractor):
         self.file_urls = None
 
     def extract(self):
-        # type: () -> Any
-
+        # type: () -> Union[None, Tuple[str, str, str]]
         """
-        Fetch one result row from RestApiQuery, convert to {model_class} if specified before
-        returning.
-        :return:
+        :return: (filename, filepath, file contents as a string)
         """
         if not self._extract_iter:
             self._extract_iter = self._get_extract_iter()
 
         try:
-            file_url = next(self._get_extract_iter())
-            file_contents = self._client.get_file_contents_from_url(file_url)
-            yield file_contents
+            (name, path, download_url) = next(self._get_extract_iter())
+            file_contents = self._client.get_file_contents_from_url(download_url)
+            return (name, path, file_contents)
         except StopIteration:
             return None
 
     def _get_extract_iter(self):
         if not self.file_urls:
-            self.file_urls = self._client.get_all_file_urls_in_directory(
+            files = self._client.get_all_file_urls_in_directory(
                 self.repo_name,
-                self.repo_directory
+                self.repo_directory,
+                recurse=self.recurse
             )
-            self.file_urls = iter([file_url for file_url in self.file_urls if self.wanted_file_type(file_url)])
+            self.file_urls = iter([
+                (name, path, download_url)
+                for (name, path, download_url) in files
+                if self.wanted_file_type(download_url)
+            ])
 
         return self.file_urls
 

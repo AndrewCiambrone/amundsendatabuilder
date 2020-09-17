@@ -21,6 +21,10 @@ from databuilder import Scoped
 from pyhocon import ConfigFactory, ConfigTree  # noqa: F401
 
 
+class BadBulkUploadException(Exception):
+    message = "Failed to insert rows into Neptune"
+
+
 class BulkUploaderNeptuneClient:
     def __init__(self, neptune_host, region, access_key, access_secret, arn, session_token=None):
         # type: (str, str, str, str, str, Union[str, None]) -> None
@@ -44,7 +48,7 @@ class BulkUploaderNeptuneClient:
             "source": s3_source,
             "format": "csv",
             "region": self.region,
-            "iamRoleArn" : self.arn,
+            "iamRoleArn": self.arn,
             "updateSingleCardinalityProperties": "TRUE"
         }
         response_json = self._make_signed_request(
@@ -54,7 +58,7 @@ class BulkUploaderNeptuneClient:
         )
         load_id = response_json.get('payload', {}).get('loadId')
         if load_id is None:
-            print(response_json)
+            raise BadBulkUploadException()
         return load_id
 
     def is_bulk_status_job_done(self, load_id):

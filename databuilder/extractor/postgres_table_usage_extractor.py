@@ -18,10 +18,12 @@ class PostgresTableUsageExtractor(Extractor):
 
     # CONFIG KEYS
     SQL_STATEMENT_KEY = 'sql_statement_key'
+    DATABASE_TYPE_KEY = 'database_type_key'
 
     def init(self, conf):
         # type: (ConfigTree) -> None
 
+        self.db = conf.get_string(self.DATABASE_TYPE_KEY, 'postgres')
         self.sql_stmt = conf.get_string(PostgresTableUsageExtractor.SQL_STATEMENT_KEY)
         self.sql_stmt = self.sql_stmt.replace('%', '%%')
 
@@ -58,7 +60,7 @@ class PostgresTableUsageExtractor(Extractor):
             (database_name, schema_name, table_name, user_name, total_queries_count) = row
 
             yield ColumnUsageModel(
-                database="postgres",
+                database=self.db,
                 cluster=database_name,
                 schema=schema_name,
                 table_name=table_name,

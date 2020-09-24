@@ -70,7 +70,7 @@ class BulkUploaderNeptuneClient:
             print(repr(status_response))
             raise Exception("Ran into error bulk loading")
 
-        if status not in ("LOAD_COMPLETED", "LOAD_IN_PROGRESS"):
+        if status not in ("LOAD_COMPLETED", "LOAD_IN_PROGRESS", "LOAD_NOT_STARTED", "LOAD_IN_QUEUE"):
             print(repr(status_response))
             raise Exception("Ran into error bulk loading")
 

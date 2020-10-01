@@ -8,7 +8,7 @@ from typing import Iterator, Union, Dict, Any  # noqa: F401
 from databuilder import Scoped
 from databuilder.extractor.base_extractor import Extractor
 from databuilder.extractor.sql_alchemy_extractor import SQLAlchemyExtractor
-from databuilder.models.table_metadata import TableMetadata, ColumnMetadata
+from databuilder.models.table_metadata import TableMetadata, ColumnMetadata, DescriptionMetadata
 from itertools import groupby
 
 
@@ -43,12 +43,18 @@ class PostgresMetadataExtractor(Extractor):
     CLUSTER_KEY = 'cluster_key'
     USE_CATALOG_AS_CLUSTER_NAME = 'use_catalog_as_cluster_name'
     DATABASE_KEY = 'database_key'
+    DESCRIPTIONS_SOURCE = 'descriptions_source'
 
     # Default values
     DEFAULT_CLUSTER_NAME = 'master'
 
     DEFAULT_CONFIG = ConfigFactory.from_dict(
-        {WHERE_CLAUSE_SUFFIX_KEY: ' ', CLUSTER_KEY: DEFAULT_CLUSTER_NAME, USE_CATALOG_AS_CLUSTER_NAME: True}
+        {
+            WHERE_CLAUSE_SUFFIX_KEY: ' ',
+            CLUSTER_KEY: DEFAULT_CLUSTER_NAME,
+            USE_CATALOG_AS_CLUSTER_NAME: True,
+            DESCRIPTIONS_SOURCE: DescriptionMetadata.DEFAULT_SOURCE
+        }
     )
 
     def init(self, conf):
@@ -77,6 +83,7 @@ class PostgresMetadataExtractor(Extractor):
             .with_fallback(ConfigFactory.from_dict({SQLAlchemyExtractor.EXTRACT_SQL: self.sql_stmt}))
 
         self.sql_stmt = sql_alch_conf.get_string(SQLAlchemyExtractor.EXTRACT_SQL)
+        self.description_source = conf.get_string(PostgresMetadataExtractor.DESCRIPTIONS_SOURCE)
 
         LOGGER.info('SQL for postgres metadata: {}'.format(self.sql_stmt))
 
@@ -107,14 +114,23 @@ class PostgresMetadataExtractor(Extractor):
 
             for row in group:
                 last_row = row
-                columns.append(ColumnMetadata(row['col_name'], row['col_description'],
-                                              row['col_type'], row['col_sort_order']))
+                columns.append(ColumnMetadata(
+                    row['col_name'],
+                    row['col_description'],
+                    row['col_type'],
+                    row['col_sort_order'],
+                    description_source=self.description_source
+                ))
 
-            yield TableMetadata(self._database, last_row['cluster'],
-                                last_row['schema'],
-                                last_row['name'],
-                                last_row['description'],
-                                columns)
+            yield TableMetadata(
+                self._database,
+                last_row['cluster'],
+                last_row['schema'],
+                last_row['name'],
+                last_row['description'],
+                columns,
+                description_source=self.description_source
+            )
 
     def _get_raw_extract_iter(self):
         # type: () -> Iterator[Dict[str, Any]]

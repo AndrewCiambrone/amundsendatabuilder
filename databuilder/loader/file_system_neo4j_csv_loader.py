@@ -13,6 +13,7 @@ from databuilder.models.neo4j_csv_serde import NODE_LABEL, \
     RELATION_START_LABEL, RELATION_END_LABEL, RELATION_TYPE
 from databuilder.models.neo4j_csv_serde import Neo4jCsvSerializable  # noqa: F401
 from databuilder.utils.closer import Closer
+from databuilder.serializers import neo4_serializer
 
 if six.PY2:
     import unicodecsv as csv
@@ -114,9 +115,10 @@ class FsNeo4jCSVLoader(Loader):
         :return:
         """
 
-        node_dict = csv_serializable.next_node()
-        while node_dict:
-            key = (node_dict[NODE_LABEL], len(node_dict))
+        node = csv_serializable.next_node()
+        while node:
+            node_dict = neo4_serializer.convert_node(node)
+            key = (node.label, len(node_dict))
             file_suffix = '{}_{}'.format(*key)
             node_writer = self._get_writer(node_dict,
                                            self._node_file_mapping,
@@ -124,13 +126,14 @@ class FsNeo4jCSVLoader(Loader):
                                            self._node_dir,
                                            file_suffix)
             node_writer.writerow(node_dict)
-            node_dict = csv_serializable.next_node()
+            node = csv_serializable.next_node()
 
-        relation_dict = csv_serializable.next_relation()
-        while relation_dict:
-            key2 = (relation_dict[RELATION_START_LABEL],
-                    relation_dict[RELATION_END_LABEL],
-                    relation_dict[RELATION_TYPE],
+        relation = csv_serializable.next_relation()
+        while relation:
+            relation_dict = neo4_serializer.convert_relationship(relation)
+            key2 = (relation.start_label,
+                    relation.end_label,
+                    relation.type,
                     len(relation_dict))
 
             file_suffix = '{}_{}_{}'.format(key2[0], key2[1], key2[2])
@@ -140,7 +143,7 @@ class FsNeo4jCSVLoader(Loader):
                                                self._relation_dir,
                                                file_suffix)
             relation_writer.writerow(relation_dict)
-            relation_dict = csv_serializable.next_relation()
+            relation = csv_serializable.next_relation()
 
     def _get_writer(self,
                     csv_record_dict,  # type: Dict[str, Any]

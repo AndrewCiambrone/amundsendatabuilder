@@ -7,6 +7,8 @@ from databuilder.models.neo4j_csv_serde import (  # noqa: F401
     RELATION_END_KEY, RELATION_END_LABEL, RELATION_TYPE,
     RELATION_REVERSE_TYPE)
 from databuilder.models.neo4j_csv_serde import Neo4jCsvSerializable
+from databuilder.models.graph_node import GraphNode
+from databuilder.models.graph_relationship import GraphRelationship
 
 
 class TestSerialize(unittest.TestCase):
@@ -87,47 +89,63 @@ class Movie(Neo4jCsvSerializable):
 
     def create_nodes(self):
         # type: () -> Iterable[Dict[str, Any]]
-        result = [{NODE_KEY: Movie.KEY_FORMAT.format(self._name),
-                   NODE_LABEL: Movie.LABEL,
-                   'name': self._name}]
+        result = [
+            GraphNode(
+                id=Movie.KEY_FORMAT.format(self._name),
+                label=Movie.LABEL,
+                node_attributes={
+                    'name': self._name
+                }
+            )
+        ]
 
         for actor in self._actors:
-            result.append({NODE_KEY: Actor.KEY_FORMAT.format(actor.name),
-                           NODE_LABEL: Actor.LABEL,
-                           'name': self._name})
+            actor_node = GraphNode(
+                id=Actor.KEY_FORMAT.format(actor.name),
+                label=Actor.LABEL,
+                node_attributes={
+                    'name': self._name
+                }
+            )
+            result.append(actor_node)
 
         for city in self._cities:
-            result.append({NODE_KEY: City.KEY_FORMAT.format(city.name),
-                           NODE_LABEL: City.LABEL,
-                           'name': self._name})
+            city_node = GraphNode(
+                id=City.KEY_FORMAT.format(city.name),
+                label=City.LABEL,
+                node_attributes={
+                    'name': self._name
+                }
+            )
+            result.append(city_node)
         return result
 
     def create_relation(self):
         # type: () -> Iterable[Dict[str, Any]]
         result = []
         for actor in self._actors:
-            result.append({RELATION_START_KEY:
-                           Movie.KEY_FORMAT.format(self._name),
-                           RELATION_START_LABEL: Movie.LABEL,
-                           RELATION_END_KEY:
-                           Actor.KEY_FORMAT.format(actor.name),
-                           RELATION_END_LABEL: Actor.LABEL,
-                           RELATION_TYPE: Movie.MOVIE_ACTOR_RELATION_TYPE,
-                           RELATION_REVERSE_TYPE:
-                           Movie.ACTOR_MOVIE_RELATION_TYPE
-                           })
+            actor_relation = GraphRelationship(
+                start_key=Movie.KEY_FORMAT.format(self._name),
+                start_label=Movie.LABEL,
+                end_key=Actor.KEY_FORMAT.format(actor.name),
+                end_label=Actor.LABEL,
+                type=Movie.MOVIE_ACTOR_RELATION_TYPE,
+                reverse_type=Movie.ACTOR_MOVIE_RELATION_TYPE,
+                relationship_attributes={}
+            )
+            result.append(actor_relation)
 
         for city in self._cities:
-            result.append({RELATION_START_KEY:
-                           City.KEY_FORMAT.format(self._name),
-                           RELATION_START_LABEL: Movie.LABEL,
-                           RELATION_END_KEY:
-                           City.KEY_FORMAT.format(city.name),
-                           RELATION_END_LABEL: City.LABEL,
-                           RELATION_TYPE: Movie.MOVIE_CITY_RELATION_TYPE,
-                           RELATION_REVERSE_TYPE:
-                           Movie.CITY_MOVIE_RELATION_TYPE
-                           })
+            city_relation = GraphRelationship(
+                start_key=Movie.KEY_FORMAT.format(self._name),
+                start_label=Movie.LABEL,
+                end_key=City.KEY_FORMAT.format(city.name),
+                end_label=City.LABEL,
+                type=Movie.MOVIE_CITY_RELATION_TYPE,
+                reverse_type=Movie.CITY_MOVIE_RELATION_TYPE,
+                relationship_attributes={}
+            )
+            result.append(city_relation)
         return result
 
 

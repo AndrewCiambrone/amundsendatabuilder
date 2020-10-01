@@ -59,3 +59,12 @@ httplib2>=0.18.0
 unidecode
 
 requests==2.23.0,<3.0
+boto3==1.9.242
+
+gremlinpython==3.4.7
+overrides==2.5
+websocket-client==0.56.0
+requests-aws4auth==0.9
+mocket==3.7.3
+lkml==0.2.2
+freezegun==0.1.9

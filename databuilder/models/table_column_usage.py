@@ -1,12 +1,13 @@
 from typing import Iterable, Union, Dict, Any, Iterator  # noqa: F401
 
 from databuilder.models.neo4j_csv_serde import (
-    Neo4jCsvSerializable, RELATION_START_KEY, RELATION_END_KEY,
-    RELATION_START_LABEL, RELATION_END_LABEL, RELATION_TYPE, RELATION_REVERSE_TYPE
+    Neo4jCsvSerializable
 )
 from databuilder.models.table_metadata import TableMetadata
 from databuilder.models.user import User
-from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
+
+from databuilder.models.graph_node import GraphNode
+from databuilder.models.graph_relationship import GraphRelationship
 
 
 class ColumnReader(object):
@@ -50,7 +51,7 @@ class TableColumnUsage(Neo4jCsvSerializable):
     TABLE_USER_RELATION_TYPE = 'READ_BY'
 
     # Property key for relationship read, readby relationship
-    READ_RELATION_COUNT = 'read_count{}'.format(UNQUOTED_SUFFIX)
+    READ_RELATION_COUNT = 'read_count'
 
     def __init__(self,
                  col_readers,  # type: Iterable[ColumnReader]
@@ -65,7 +66,7 @@ class TableColumnUsage(Neo4jCsvSerializable):
         self._rel_iter = self._create_rel_iterator()
 
     def create_next_node(self):
-        # type: () -> Union[Dict[str, Any], None]
+        # type: () -> Union[GraphNode, None]
 
         try:
             return next(self._node_iterator)
@@ -73,14 +74,14 @@ class TableColumnUsage(Neo4jCsvSerializable):
             return None
 
     def _create_node_iterator(self):
-        # type: () -> Iterator[Any]
+        # type: () -> Iterator[GraphNode]
         for col_reader in self.col_readers:
             if col_reader.column == '*':
                 # using yield for better memory efficiency
                 yield User(email=col_reader.user_email).create_nodes()[0]
 
     def create_next_relation(self):
-        # type: () -> Union[Dict[str, Any], None]
+        # type: () -> Union[GraphRelationship, None]
 
         try:
             return next(self._rel_iter)
@@ -88,17 +89,20 @@ class TableColumnUsage(Neo4jCsvSerializable):
             return None
 
     def _create_rel_iterator(self):
-        # type: () -> Iterator[Any]
+        # type: () -> Iterator[GraphRelationship]
         for col_reader in self.col_readers:
-            yield {
-                RELATION_START_LABEL: TableMetadata.TABLE_NODE_LABEL,
-                RELATION_END_LABEL: User.USER_NODE_LABEL,
-                RELATION_START_KEY: self._get_table_key(col_reader),
-                RELATION_END_KEY: self._get_user_key(col_reader.user_email),
-                RELATION_TYPE: TableColumnUsage.TABLE_USER_RELATION_TYPE,
-                RELATION_REVERSE_TYPE: TableColumnUsage.USER_TABLE_RELATION_TYPE,
-                TableColumnUsage.READ_RELATION_COUNT: col_reader.read_count
-            }
+            relationship = GraphRelationship(
+                start_label=TableMetadata.TABLE_NODE_LABEL,
+                start_key=self._get_table_key(col_reader),
+                end_label=User.USER_NODE_LABEL,
+                end_key=self._get_user_key(col_reader.user_email),
+                type=TableColumnUsage.TABLE_USER_RELATION_TYPE,
+                reverse_type=TableColumnUsage.USER_TABLE_RELATION_TYPE,
+                relationship_attributes={
+                    TableColumnUsage.READ_RELATION_COUNT: col_reader.read_count
+                }
+            )
+            yield relationship
 
     def _get_table_key(self, col_reader):
         # type: (ColumnReader) -> str

@@ -1,3 +1,6 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import abc
 
 from typing import Union  # noqa: F401
@@ -6,7 +9,6 @@ from databuilder.models.graph_relationship import GraphRelationship
 
 NODE_KEY = 'KEY'
 NODE_LABEL = 'LABEL'
-NODE_REQUIRED_HEADERS = {NODE_LABEL, NODE_KEY}
 
 RELATION_START_KEY = 'START_KEY'
 RELATION_START_LABEL = 'START_LABEL'

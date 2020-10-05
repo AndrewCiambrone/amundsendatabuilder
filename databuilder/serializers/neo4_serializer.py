@@ -1,3 +1,6 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import Dict, Any
 
 from databuilder.models.graph_relationship import GraphRelationship

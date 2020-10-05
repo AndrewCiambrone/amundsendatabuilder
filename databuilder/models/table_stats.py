@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
-
-from typing import Any, Dict, List, Optional
+import ast
+from typing import List, Optional
 
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.table_metadata import ColumnMetadata
@@ -28,9 +28,9 @@ class TableColumnStats(GraphSerializable):
                  stat_val: str,
                  start_epoch: str,
                  end_epoch: str,
-                 db: str='hive',
-                 cluster: str='gold',
-                 schema: str=None
+                 db: str = 'hive',
+                 cluster: str = 'gold',
+                 schema: str = None
                  ) -> None:
         if schema is None:
             self.schema, self.table = table_name.split('.')
@@ -43,6 +43,10 @@ class TableColumnStats(GraphSerializable):
         self.end_epoch = end_epoch
         self.cluster = cluster
         self.stat_name = stat_name
+        try:
+            stat_val = ast.literal_eval(stat_val)
+        except ValueError:
+            stat_val = stat_val
         self.stat_val = stat_val
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())

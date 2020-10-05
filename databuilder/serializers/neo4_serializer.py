@@ -12,24 +12,25 @@ from databuilder.models.graph_serializable import (
     RELATION_START_LABEL,
     RELATION_TYPE
 )
+from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
 
-UNQUOTED_SUFFIX = ':UNQUOTED'
 
-
-def serialize_node(node):
-    # type: (GraphNode) -> Dict[str, Any]
+def serialize_node(node: GraphNode) -> Dict[str, Any]:
     node_dict = {
         NODE_LABEL: node.label,
-        NODE_KEY: node.id
+        NODE_KEY: node.key
     }
-    for key, value in node.attributes.values():
-        node_dict[key] = value
+    for key, value in node.attributes.items():
+        key_suffix = _get_neo4j_suffix_value(value)
+        formatted_key = "{key}{suffix}".format(
+            key=key,
+            suffix=key_suffix
+        )
+        node_dict[formatted_key] = value
     return node_dict
 
 
-def serialize_relationship(relationship):
-    # type: (GraphRelationship) -> Dict[str, Any]
-
+def serialize_relationship(relationship: GraphRelationship) -> Dict[str, Any]:
     relationship_dict = {
         RELATION_START_KEY: relationship.start_key,
         RELATION_START_LABEL: relationship.start_label,
@@ -38,14 +39,18 @@ def serialize_relationship(relationship):
         RELATION_TYPE: relationship.type,
         RELATION_REVERSE_TYPE: relationship.reverse_type,
     }
-    for key, value in relationship.attributes.values():
-        relationship_dict[key] = value
+    for key, value in relationship.attributes.items():
+        key_suffix = _get_neo4j_suffix_value(value)
+        formatted_key = "{key}{suffix}".format(
+            key=key,
+            suffix=key_suffix
+        )
+        relationship_dict[formatted_key] = value
 
     return relationship_dict
 
 
-def _get_neo4j_suffix_value(value):
-    # type: (Any) -> str
+def _get_neo4j_suffix_value(value: Any) -> str:
     if isinstance(value, int):
         return UNQUOTED_SUFFIX
 

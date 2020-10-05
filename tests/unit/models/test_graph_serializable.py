@@ -10,6 +10,9 @@ from databuilder.models.graph_serializable import (  # noqa: F401
     RELATION_END_KEY, RELATION_END_LABEL, RELATION_TYPE,
     RELATION_REVERSE_TYPE)
 from databuilder.models.graph_serializable import GraphSerializable
+from databuilder.models.graph_relationship import GraphRelationship
+from databuilder.models.graph_node import GraphNode
+from databuilder.serializers import neo4_serializer
 
 
 class TestSerialize(unittest.TestCase):
@@ -22,7 +25,7 @@ class TestSerialize(unittest.TestCase):
         actual = []
         node_row = movie.next_node()
         while node_row:
-            actual.append(node_row)
+            actual.append(neo4_serializer.serialize_node(node_row))
             node_row = movie.next_node()
 
         expected = [
@@ -37,7 +40,7 @@ class TestSerialize(unittest.TestCase):
         actual = []
         relation_row = movie.next_relation()
         while relation_row:
-            actual.append(relation_row)
+            actual.append(neo4_serializer.serialize_relationship(relation_row))
             relation_row = movie.next_relation()
 
         expected = [
@@ -104,46 +107,60 @@ class Movie(GraphSerializable):
             return None
 
     def create_nodes(self) -> Iterable[Dict[str, Any]]:
-        result = [{NODE_KEY: Movie.KEY_FORMAT.format(self._name),
-                   NODE_LABEL: Movie.LABEL,
-                   'name': self._name}]
+        result = [GraphNode(
+            key=Movie.KEY_FORMAT.format(self._name),
+            label=Movie.LABEL,
+            attributes={
+                'name': self._name
+            }
+        )]
 
         for actor in self._actors:
-            result.append({NODE_KEY: Actor.KEY_FORMAT.format(actor.name),
-                           NODE_LABEL: Actor.LABEL,
-                           'name': self._name})
+            actor_node = GraphNode(
+                key=Actor.KEY_FORMAT.format(actor.name),
+                label=Actor.LABEL,
+                attributes={
+                    'name': self._name
+                }
+            )
+            result.append(actor_node)
 
         for city in self._cities:
-            result.append({NODE_KEY: City.KEY_FORMAT.format(city.name),
-                           NODE_LABEL: City.LABEL,
-                           'name': self._name})
+            city_node = GraphNode(
+                key=City.KEY_FORMAT.format(city.name),
+                label=City.LABEL,
+                attributes={
+                    'name': self._name
+                }
+            )
+            result.append(city_node)
         return result
 
     def create_relation(self) -> Iterable[Dict[str, Any]]:
         result = []
         for actor in self._actors:
-            result.append({RELATION_START_KEY:
-                           Movie.KEY_FORMAT.format(self._name),
-                           RELATION_START_LABEL: Movie.LABEL,
-                           RELATION_END_KEY:
-                           Actor.KEY_FORMAT.format(actor.name),
-                           RELATION_END_LABEL: Actor.LABEL,
-                           RELATION_TYPE: Movie.MOVIE_ACTOR_RELATION_TYPE,
-                           RELATION_REVERSE_TYPE:
-                           Movie.ACTOR_MOVIE_RELATION_TYPE
-                           })
+            movie_actor_relation = GraphRelationship(
+                start_key=Movie.KEY_FORMAT.format(self._name),
+                end_key=Actor.KEY_FORMAT.format(actor.name),
+                start_label=Movie.LABEL,
+                end_label=Actor.LABEL,
+                type=Movie.MOVIE_ACTOR_RELATION_TYPE,
+                reverse_type=Movie.ACTOR_MOVIE_RELATION_TYPE,
+                attributes={}
+            )
+            result.append(movie_actor_relation)
 
         for city in self._cities:
-            result.append({RELATION_START_KEY:
-                           City.KEY_FORMAT.format(self._name),
-                           RELATION_START_LABEL: Movie.LABEL,
-                           RELATION_END_KEY:
-                           City.KEY_FORMAT.format(city.name),
-                           RELATION_END_LABEL: City.LABEL,
-                           RELATION_TYPE: Movie.MOVIE_CITY_RELATION_TYPE,
-                           RELATION_REVERSE_TYPE:
-                           Movie.CITY_MOVIE_RELATION_TYPE
-                           })
+            city_movie_relation = GraphRelationship(
+                start_key=City.KEY_FORMAT.format(self._name),
+                end_key=City.KEY_FORMAT.format(city.name),
+                start_label=Movie.LABEL,
+                end_label=City.LABEL,
+                type=Movie.MOVIE_CITY_RELATION_TYPE,
+                reverse_type=Movie.CITY_MOVIE_RELATION_TYPE,
+                attributes={}
+            )
+            result.append(city_movie_relation)
         return result
 
 

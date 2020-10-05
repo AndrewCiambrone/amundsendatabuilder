@@ -47,13 +47,14 @@ class DashboardLastModifiedTimestamp(GraphSerializable):
             return None
 
     def _create_node_iterator(self) -> Iterator[GraphNode]:
+        node_attributes = {
+            timestamp_constants.TIMESTAMP_PROPERTY: self._last_modified_timestamp,
+            timestamp_constants.TIMESTAMP_NAME_PROPERTY: timestamp_constants.TimestampName.last_updated_timestamp.name
+        }
         node = GraphNode(
             key=self._get_last_modified_node_key(),
             label=timestamp_constants.NODE_LABEL,
-            attributes={
-                timestamp_constants.TIMESTAMP_PROPERTY: self._last_modified_timestamp,
-                timestamp_constants.TIMESTAMP_NAME_PROPERTY: timestamp_constants.TimestampName.last_updated_timestamp.name,
-            }
+            attributes=node_attributes
         )
         yield node
 

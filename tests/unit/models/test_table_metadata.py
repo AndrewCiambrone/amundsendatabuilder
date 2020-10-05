@@ -5,6 +5,7 @@ import copy
 import unittest
 
 from databuilder.models.table_metadata import ColumnMetadata, TableMetadata
+from databuilder.serializers import neo4_serializer
 
 
 class TestTableMetadata(unittest.TestCase):
@@ -108,15 +109,18 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.table_metadata.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.table_metadata.next_node()
         for i in range(0, len(self.expected_nodes)):
+            print(actual)
             self.assertEqual(actual[i], self.expected_nodes[i])
 
         relation_row = self.table_metadata.next_relation()
         actual = []
         while relation_row:
-            actual.append(relation_row)
+            relation_row_serialized = neo4_serializer.serialize_relationship(relation_row)
+            actual.append(relation_row_serialized)
             relation_row = self.table_metadata.next_relation()
         for i in range(0, len(self.expected_rels)):
             print(self.expected_rels[i])
@@ -127,7 +131,8 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.table_metadata2.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.table_metadata2.next_node()
 
         self.assertEqual(self.expected_nodes_deduped, actual)
@@ -135,7 +140,8 @@ class TestTableMetadata(unittest.TestCase):
         relation_row = self.table_metadata2.next_relation()
         actual = []
         while relation_row:
-            actual.append(relation_row)
+            relation_row_serialized = neo4_serializer.serialize_relationship(relation_row)
+            actual.append(relation_row_serialized)
             relation_row = self.table_metadata2.next_relation()
 
         self.assertEqual(self.expected_rels_deduped, actual)
@@ -152,7 +158,8 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.table_metadata3.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.table_metadata3.next_node()
 
         self.assertEqual(actual[0].get('attr1'), 'uri')
@@ -171,7 +178,8 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.custom_source.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.custom_source.next_node()
         expected = {'LABEL': 'Programmatic_Description',
                     'KEY': 'hive://gold.test_schema3/test_table4/_custom_description',
@@ -186,7 +194,8 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.table_metadata4.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.table_metadata4.next_node()
 
         self.assertEqual(actual[0].get('attr1'), 'uri')
@@ -201,7 +210,8 @@ class TestTableMetadata(unittest.TestCase):
         relation_row = self.table_metadata4.next_relation()
         actual = []
         while relation_row:
-            actual.append(relation_row)
+            relation_row_serialized = neo4_serializer.serialize_relationship(relation_row)
+            actual.append(relation_row_serialized)
             relation_row = self.table_metadata4.next_relation()
 
         # Table tag relationship
@@ -232,7 +242,8 @@ class TestTableMetadata(unittest.TestCase):
         node_row = self.table_metadata5.next_node()
         actual = []
         while node_row:
-            actual.append(node_row)
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            actual.append(node_row_serialized)
             node_row = self.table_metadata5.next_node()
 
         self.assertEqual(actual[2].get('LABEL'), 'Tag')
@@ -242,7 +253,8 @@ class TestTableMetadata(unittest.TestCase):
         relation_row = self.table_metadata5.next_relation()
         actual = []
         while relation_row:
-            actual.append(relation_row)
+            relation_row_serialized = neo4_serializer.serialize_relationship(relation_row)
+            actual.append(relation_row_serialized)
             relation_row = self.table_metadata5.next_relation()
 
         # Table tag relationship
@@ -265,13 +277,15 @@ class TestTableMetadata(unittest.TestCase):
         # Test table tag fields are not populated from empty List
         node_row = self.table_metadata6.next_node()
         while node_row:
-            self.assertNotEqual(node_row.get('LABEL'), 'Tag')
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            self.assertNotEqual(node_row_serialized.get('LABEL'), 'Tag')
             node_row = self.table_metadata6.next_node()
 
         # Test table tag fields are not populated from empty str
         node_row = self.table_metadata7.next_node()
         while node_row:
-            self.assertNotEqual(node_row.get('LABEL'), 'Tag')
+            node_row_serialized = neo4_serializer.serialize_node(node_row)
+            self.assertNotEqual(node_row_serialized.get('LABEL'), 'Tag')
             node_row = self.table_metadata7.next_node()
 
 

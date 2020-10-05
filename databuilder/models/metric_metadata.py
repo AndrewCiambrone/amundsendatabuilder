@@ -1,8 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from collections import namedtuple
-from typing import Any, Iterator, List, Set, Union
+from typing import Any, Iterator, List, Union
 
 
 # TODO: We could separate TagMetadata from table_metadata to own module
@@ -13,10 +12,6 @@ from databuilder.models.graph_serializable import (
 
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
-
-
-NodeTuple = namedtuple('KeyName', ['key', 'name', 'label'])
-RelTuple = namedtuple('RelKeys', ['start_label', 'end_label', 'start_key', 'end_key', 'type', 'reverse_type'])
 
 
 class MetricMetadata(GraphSerializable):
@@ -64,9 +59,8 @@ class MetricMetadata(GraphSerializable):
     METRIC_TAG_RELATION_TYPE = 'TAG'
     TAG_METRIC_RELATION_TYPE = 'TAG_OF'
 
-    serialized_nodes = set()  # type: Set[GraphNode]
-    serialized_rels = set()  # type: Set[GraphRelationship]
-
+    serialized_node = set()
+    serialized_rels = set()
 
     def __init__(self,
                  dashboard_group: str,

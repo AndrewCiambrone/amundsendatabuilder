@@ -8,7 +8,6 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, Union
 
 from databuilder.models.cluster import cluster_constants
 from databuilder.models.graph_serializable import GraphSerializable
-from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
 from databuilder.models.schema import schema_constant
 
 from databuilder.models.graph_node import GraphNode
@@ -122,9 +121,9 @@ class DescriptionMetadata:
 
     def get_node(self, node_key) -> GraphNode:
         node = GraphNode(
-            id=node_key,
+            key=node_key,
             label=self._label,
-            node_attributes={
+            attributes={
                 DescriptionMetadata.DESCRIPTION_SOURCE: self._source,
                 DescriptionMetadata.DESCRIPTION_TEXT: self._text
             }
@@ -199,7 +198,7 @@ class TableMetadata(GraphSerializable):
     TABLE_NODE_LABEL = 'Table'
     TABLE_KEY_FORMAT = '{db}://{cluster}.{schema}/{tbl}'
     TABLE_NAME = 'name'
-    IS_VIEW = 'is_view{}'.format(UNQUOTED_SUFFIX)  # bool value needs to be unquoted when publish to neo4j
+    IS_VIEW = 'is_view'
 
     TABLE_DESCRIPTION_FORMAT = '{db}://{cluster}.{schema}/{tbl}/{description_id}'
 
@@ -225,8 +224,8 @@ class TableMetadata(GraphSerializable):
     TAG_TABLE_RELATION_TYPE = 'TAG'
 
     # Only for deduping database, cluster, and schema (table and column will be always processed)
-    serialized_nodes: Set[Any] = set()
-    serialized_rels: Set[Any] = set()
+    serialized_nodes_keys: Set[Any] = set()
+    serialized_rels_keys: Set[Any] = set()
 
     def __init__(self,
                  database: str,
@@ -403,14 +402,14 @@ class TableMetadata(GraphSerializable):
                 }
             ),
             GraphNode(
-                key=self._get_database_key(),
+                key=self._get_cluster_key(),
                 label=TableMetadata.CLUSTER_NODE_LABEL,
                 attributes={
                     'name': self.cluster
                 }
             ),
             GraphNode(
-                key=self._get_database_key(),
+                key=self._get_schema_key(),
                 label=TableMetadata.SCHEMA_NODE_LABEL,
                 attributes={
                     'name': self.schema
@@ -419,8 +418,8 @@ class TableMetadata(GraphSerializable):
         ]
 
         for node_tuple in others:
-            if node_tuple not in TableMetadata.serialized_nodes:
-                TableMetadata.serialized_nodes.add(node_tuple)
+            if node_tuple.key not in TableMetadata.serialized_nodes_keys:
+                TableMetadata.serialized_nodes_keys.add(node_tuple.key)
                 yield node_tuple
 
     def create_next_relation(self) -> Union[GraphRelationship, None]:
@@ -429,8 +428,7 @@ class TableMetadata(GraphSerializable):
         except StopIteration:
             return None
 
-    def _create_next_relation(self)  -> Iterator[GraphRelationship]:
-
+    def _create_next_relation(self) -> Iterator[GraphRelationship]:
         schema_table_relationship = GraphRelationship(
             start_key=self._get_schema_key(),
             start_label=TableMetadata.SCHEMA_NODE_LABEL,
@@ -514,6 +512,6 @@ class TableMetadata(GraphSerializable):
         ]
 
         for rel_tuple in others:
-            if rel_tuple not in TableMetadata.serialized_rels:
-                TableMetadata.serialized_rels.add(rel_tuple)
+            if (rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type) not in TableMetadata.serialized_rels_keys:
+                TableMetadata.serialized_rels_keys.add((rel_tuple.start_key, rel_tuple.end_key, rel_tuple.type))
                 yield rel_tuple

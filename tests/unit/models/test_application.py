@@ -9,6 +9,7 @@ from databuilder.models.graph_serializable import NODE_KEY, \
     RELATION_END_LABEL, RELATION_TYPE, RELATION_REVERSE_TYPE
 
 from databuilder.models.table_metadata import TableMetadata
+from databuilder.serializers import neo4_serializer
 
 
 class TestApplication(unittest.TestCase):
@@ -42,11 +43,13 @@ class TestApplication(unittest.TestCase):
 
     def test_create_next_node(self) -> None:
         next_node = self.application.create_next_node()
-        self.assertEquals(next_node, self.expected_node_result)
+        serialized_next_node = neo4_serializer.serialize_node(next_node)
+        self.assertEquals(serialized_next_node, self.expected_node_result)
 
     def test_create_next_relation(self) -> None:
         next_relation = self.application.create_next_relation()
-        self.assertEquals(next_relation, self.expected_relation_result)
+        serialized_next_relation = neo4_serializer.serialize_relationship(next_relation)
+        self.assertEquals(serialized_next_relation, self.expected_relation_result)
 
     def test_get_table_model_key(self) -> None:
         table = self.application.get_table_model_key()
@@ -59,9 +62,10 @@ class TestApplication(unittest.TestCase):
     def test_create_nodes(self) -> None:
         nodes = self.application.create_nodes()
         self.assertEquals(len(nodes), 1)
-        self.assertEquals(nodes[0], self.expected_node_result)
+        serialized_next_node = neo4_serializer.serialize_node(nodes[0])
+        self.assertEquals(serialized_next_node, self.expected_node_result)
 
     def test_create_relation(self) -> None:
         relation = self.application.create_relation()
         self.assertEquals(len(relation), 1)
-        self.assertEquals(relation[0], self.expected_relation_result)
+        self.assertEquals(neo4_serializer.serialize_relationship(relation[0]), self.expected_relation_result)

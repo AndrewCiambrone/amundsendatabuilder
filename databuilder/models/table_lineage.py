@@ -90,6 +90,7 @@ class TableLineage(GraphSerializable):
                         table=self.table
                     ),
                     start_label=TableMetadata.TABLE_NODE_LABEL,
+                    end_label=TableMetadata.TABLE_NODE_LABEL,
                     end_key=self.get_table_model_key(
                         db=m.group(1),
                         cluster=m.group(2),

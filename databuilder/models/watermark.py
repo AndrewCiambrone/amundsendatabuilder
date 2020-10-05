@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List, Optional, Tuple
+from typing import List, Union, Tuple
 
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.graph_node import GraphNode
@@ -46,14 +46,14 @@ class Watermark(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self) -> Optional[GraphNode, None]:
+    def create_next_node(self) -> Union[GraphNode, None]:
         # return the string representation of the data
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_next_relation(self) -> Optional[GraphRelationship]:
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iter)
         except StopIteration:

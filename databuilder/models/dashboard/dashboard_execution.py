@@ -53,7 +53,7 @@ class DashboardExecution(GraphSerializable):
         except StopIteration:
             return None
 
-    def _create_node_iterator(self)  -> Iterator[GraphNode]:
+    def _create_node_iterator(self) -> Iterator[GraphNode]:
         node = GraphNode(
             key=self._get_last_execution_node_key(),
             label=DashboardExecution.DASHBOARD_EXECUTION_LABEL,

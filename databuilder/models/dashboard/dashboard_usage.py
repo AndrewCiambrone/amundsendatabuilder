@@ -58,7 +58,7 @@ class DashboardUsage(GraphSerializable):
         self._should_create_user_node = bool(should_create_user_node)
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self)  -> Union[GraphNode, None]:
+    def create_next_node(self) -> Union[GraphNode, None]:
         if self._should_create_user_node:
             return self._user_model.create_next_node()
 
@@ -83,10 +83,9 @@ class DashboardUsage(GraphSerializable):
             end_key=User.get_user_model_key(email=self._email),
             type=READ_REVERSE_RELATION_TYPE,
             reverse_type=READ_RELATION_TYPE,
-            relationship_attributes={
+            attributes={
                 READ_RELATION_COUNT_PROPERTY: self._view_count
-            },
-            attributes={}
+            }
         )
         yield relationship
 

@@ -4,7 +4,7 @@
 import logging
 import re
 
-from typing import Optional, Any, List, Union
+from typing import Optional, Any, List, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
@@ -54,7 +54,7 @@ class DashboardTable(GraphSerializable):
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self) -> Optional[GraphRelationship]:
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         for table_id in self._table_ids:
             m = re.match('([^./]+)://([^./]+)\.([^./]+)\/([^./]+)', table_id)
             if m:

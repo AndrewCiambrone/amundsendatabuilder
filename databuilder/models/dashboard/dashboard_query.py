@@ -3,7 +3,7 @@
 
 import logging
 
-from typing import Optional, Dict, Any, Union, Iterator
+from typing import Optional, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
@@ -47,7 +47,7 @@ class DashboardQuery(GraphSerializable):
         self._node_iterator = self._create_node_iterator()
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self) -> Union[Dict[str, Any], None]:
+    def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iterator)
         except StopIteration:

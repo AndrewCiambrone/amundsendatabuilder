@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Dict, Any, Union, Iterator
+from typing import Any, Union, Iterator
 
 from databuilder.models.graph_serializable import (GraphSerializable)
 from databuilder.models.schema.schema_constant import SCHEMA_NODE_LABEL, SCHEMA_NAME_ATTR
@@ -46,7 +46,7 @@ class SchemaModel(GraphSerializable):
         if self._description:
             yield self._description.get_node(self._get_description_node_key())
 
-    def create_next_relation(self) -> Union[Dict[str, Any], None]:
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:

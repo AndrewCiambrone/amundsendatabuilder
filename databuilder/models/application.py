@@ -55,7 +55,7 @@ class Application(GraphSerializable):
         except StopIteration:
             return None
 
-    def create_next_relation(self) -> Union[GraphNode, None]:
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iter)
         except StopIteration:

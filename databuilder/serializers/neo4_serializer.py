@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_node import GraphNode
@@ -18,7 +18,10 @@ from databuilder.models.graph_serializable import (
 from databuilder.publisher.neo4j_csv_publisher import UNQUOTED_SUFFIX
 
 
-def serialize_node(node: GraphNode) -> Dict[str, Any]:
+def serialize_node(node: Optional[GraphNode]) -> Dict[str, Any]:
+    if node is None:
+        return {}
+
     node_dict = {
         NODE_LABEL: node.label,
         NODE_KEY: node.key
@@ -33,7 +36,10 @@ def serialize_node(node: GraphNode) -> Dict[str, Any]:
     return node_dict
 
 
-def serialize_relationship(relationship: GraphRelationship) -> Dict[str, Any]:
+def serialize_relationship(relationship: Optional[GraphRelationship]) -> Dict[str, Any]:
+    if relationship is None:
+        return {}
+
     relationship_dict = {
         RELATION_START_KEY: relationship.start_key,
         RELATION_START_LABEL: relationship.start_label,

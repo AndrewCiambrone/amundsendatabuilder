@@ -3,12 +3,8 @@
 
 import unittest
 
-from typing import Union, Dict, Any, Iterable
+from typing import Union, Iterable
 
-from databuilder.models.graph_serializable import (  # noqa: F401
-    NODE_KEY, NODE_LABEL, RELATION_START_KEY, RELATION_START_LABEL,
-    RELATION_END_KEY, RELATION_END_LABEL, RELATION_TYPE,
-    RELATION_REVERSE_TYPE)
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_node import GraphNode
@@ -94,19 +90,19 @@ class Movie(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self) -> Union[Dict[str, Any], None]:
+    def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_next_relation(self) -> Union[Dict[str, Any], None]:
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iter)
         except StopIteration:
             return None
 
-    def create_nodes(self) -> Iterable[Dict[str, Any]]:
+    def create_nodes(self) -> Iterable[GraphNode]:
         result = [GraphNode(
             key=Movie.KEY_FORMAT.format(self._name),
             label=Movie.LABEL,
@@ -136,7 +132,7 @@ class Movie(GraphSerializable):
             result.append(city_node)
         return result
 
-    def create_relation(self) -> Iterable[Dict[str, Any]]:
+    def create_relation(self) -> Iterable[GraphRelationship]:
         result = []
         for actor in self._actors:
             movie_actor_relation = GraphRelationship(

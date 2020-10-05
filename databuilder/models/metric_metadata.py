@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Iterator, List, Union
+from typing import Any, Iterator, List, Union, Set
 
 
 # TODO: We could separate TagMetadata from table_metadata to own module
@@ -59,8 +59,8 @@ class MetricMetadata(GraphSerializable):
     METRIC_TAG_RELATION_TYPE = 'TAG'
     TAG_METRIC_RELATION_TYPE = 'TAG_OF'
 
-    serialized_node = set()
-    serialized_rels = set()
+    serialized_nodes: Set[Any] = set()
+    serialized_rels: Set[Any] = set()
 
     def __init__(self,
                  dashboard_group: str,
@@ -104,10 +104,6 @@ class MetricMetadata(GraphSerializable):
 
     def _get_metric_description_key(self) -> str:
         return MetricMetadata.METRIC_DESCRIPTION_FORMAT.format(name=self.name)
-
-    def _get_metric_expression_key(self):
-        # type: () -> str
-        return MetricMetadata.METRIC_EXPRESSION_KEY_FORMAT.format(name=self.name)
 
     def create_next_node(self) -> Union[GraphNode, None]:
         try:

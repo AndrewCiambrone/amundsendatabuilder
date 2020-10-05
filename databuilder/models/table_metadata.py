@@ -33,7 +33,7 @@ class TagMetadata(GraphSerializable):
         self._name = name
         self._tag_type = tag_type
         self._nodes = iter([self.create_tag_node(self._name, self._tag_type)])
-        self._relations: Iterator[Dict[str, Any]] = iter([])
+        self._relations: Iterator[GraphRelationship] = iter([])
 
     @staticmethod
     def get_tag_key(name: str) -> str:
@@ -42,7 +42,7 @@ class TagMetadata(GraphSerializable):
         return TagMetadata.TAG_KEY_FORMAT.format(tag=name)
 
     @staticmethod
-    def create_tag_node(name, tag_type=DEFAULT_TYPE):
+    def create_tag_node(name: str, tag_type: str = DEFAULT_TYPE) -> GraphNode:
         node = GraphNode(
             key=TagMetadata.get_tag_key(name),
             label=TagMetadata.TAG_NODE_LABEL,
@@ -119,7 +119,7 @@ class DescriptionMetadata:
     def __repr__(self) -> str:
         return 'DescriptionMetadata({!r}, {!r})'.format(self._source, self._text)
 
-    def get_node(self, node_key) -> GraphNode:
+    def get_node(self, node_key: str) -> GraphNode:
         node = GraphNode(
             key=node_key,
             label=self._label,
@@ -130,7 +130,7 @@ class DescriptionMetadata:
         )
         return node
 
-    def get_relation(self, start_node, start_key, end_key) -> GraphRelationship:
+    def get_relation(self, start_node: str, start_key: Any, end_key: Any) -> GraphRelationship:
         relationship = GraphRelationship(
             start_label=start_node,
             start_key=start_key,
@@ -339,23 +339,7 @@ class TableMetadata(GraphSerializable):
             return None
 
     def _create_next_node(self) -> Iterator[GraphNode]:
-
-        table_attributes = {
-            TableMetadata.TABLE_NAME: self.name,
-            TableMetadata.IS_VIEW: self.is_view
-        }
-        if self.attrs:
-            for k, v in self.attrs.items():
-                if k not in table_attributes:
-                    table_attributes[k] = v
-
-        table_node = GraphNode(
-            key=self._get_table_key(),
-            label=TableMetadata.TABLE_NODE_LABEL,
-            attributes=table_attributes
-        )
-        yield table_node
-
+        yield self._create_table_node()
         if self.description:
             node_key = self._get_table_description_key(self.description)
             yield self.description.get_node(node_key)
@@ -421,6 +405,22 @@ class TableMetadata(GraphSerializable):
             if node_tuple.key not in TableMetadata.serialized_nodes_keys:
                 TableMetadata.serialized_nodes_keys.add(node_tuple.key)
                 yield node_tuple
+
+    def _create_table_node(self) -> GraphNode:
+        table_attributes = {
+            TableMetadata.TABLE_NAME: self.name,
+            TableMetadata.IS_VIEW: self.is_view
+        }
+        if self.attrs:
+            for k, v in self.attrs.items():
+                if k not in table_attributes:
+                    table_attributes[k] = v
+
+        return GraphNode(
+            key=self._get_table_key(),
+            label=TableMetadata.TABLE_NODE_LABEL,
+            attributes=table_attributes
+        )
 
     def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:

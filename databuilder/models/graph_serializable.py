@@ -83,7 +83,7 @@ class GraphSerializable(object, metaclass=abc.ABCMeta):
 
     def _validate_relation_type_value(self, value: str) -> None:
         if not value == value.upper():
-            raise RuntimeError('TYPE needs to be upper case: '.format(value))
+            raise RuntimeError('TYPE needs to be upper case: {}'.format(value))
 
     def _validate_label_value(self, value: str) -> None:
         if not value.istitle():

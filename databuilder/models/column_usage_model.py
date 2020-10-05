@@ -78,7 +78,7 @@ class ColumnUsageModel(GraphSerializable):
             end_label=User.USER_NODE_LABEL,
             type=ColumnUsageModel.TABLE_USER_RELATION_TYPE,
             reverse_type=ColumnUsageModel.USER_TABLE_RELATION_TYPE,
-            relationship_attributes={
+            attributes={
                 ColumnUsageModel.READ_RELATION_COUNT: self.read_count
             }
         )

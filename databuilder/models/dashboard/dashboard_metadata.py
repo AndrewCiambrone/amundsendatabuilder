@@ -1,7 +1,7 @@
 # Copyright Contributors to the Amundsen project.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Iterator, List, Optional, Set, Union
+from typing import Any, Iterator, List, Optional, Set, Union, Dict
 
 from databuilder.models.cluster import cluster_constants
 from databuilder.models.graph_serializable import (
@@ -131,12 +131,6 @@ class DashboardMetadata(GraphSerializable):
                                                                    cluster=self.cluster,
                                                                    product=self.product)
 
-    def _get_dashboard_last_reload_time_key(self) -> str:
-        return DashboardMetadata.DASHBOARD_LAST_RELOAD_TIME_FORMAT.format(dashboard_group=self.dashboard_group,
-                                                                          dashboard_name=self.dashboard_id,
-                                                                          cluster=self.cluster,
-                                                                          product=self.product)
-
     def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iterator)
@@ -157,7 +151,7 @@ class DashboardMetadata(GraphSerializable):
             yield cluster_node
 
         # Dashboard node
-        dashboard_node_attributes = {
+        dashboard_node_attributes: Dict[str, Any] = {
             DashboardMetadata.DASHBOARD_NAME: self.dashboard_name,
         }
         if self.created_timestamp:

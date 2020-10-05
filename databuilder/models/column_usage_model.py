@@ -1,4 +1,7 @@
-from typing import Union, Dict, Any, Iterator  # noqa: F401
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
+from typing import Union, Iterable, List
 
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.usage.usage_constants import (
@@ -26,15 +29,14 @@ class ColumnUsageModel(GraphSerializable):
     READ_RELATION_COUNT = READ_RELATION_COUNT_PROPERTY
 
     def __init__(self,
-                 database,     # type: str
-                 cluster,      # type: str
-                 schema,  # type: str
-                 table_name,   # type: str
-                 column_name,  # type: str
-                 user_email,   # type: str
-                 read_count,   # type: int
-                 ):
-        # type: (...) -> None
+                 database: str,
+                 cluster: str,
+                 schema: str,
+                 table_name: str,
+                 column_name: str,
+                 user_email: str,
+                 read_count: int,
+                 ) -> None:
         self.database = database
         self.cluster = cluster
         self.schema = schema
@@ -46,16 +48,14 @@ class ColumnUsageModel(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
 
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_nodes(self):
-        # type: () -> List[GraphNode]
+    def create_nodes(self) -> List[GraphNode]:
         """
         Create a list of Neo4j node records
         :return:
@@ -63,16 +63,14 @@ class ColumnUsageModel(GraphSerializable):
 
         return User(email=self.user_email).create_nodes()
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
 
         try:
             return next(self._relation_iter)
         except StopIteration:
             return None
 
-    def create_relation(self):
-        # type: () -> Iterator[GraphRelationship]
+    def create_relation(self) -> Iterable[GraphRelationship]:
         relationship = GraphRelationship(
             start_key=self._get_table_key(),
             start_label=TableMetadata.TABLE_NODE_LABEL,
@@ -86,19 +84,16 @@ class ColumnUsageModel(GraphSerializable):
         )
         return [relationship]
 
-    def _get_table_key(self):
-        # type: (ColumnReader) -> str
+    def _get_table_key(self) -> str:
         return TableMetadata.TABLE_KEY_FORMAT.format(db=self.database,
                                                      cluster=self.cluster,
                                                      schema=self.schema,
                                                      tbl=self.table_name)
 
-    def _get_user_key(self, email):
-        # type: (str) -> str
+    def _get_user_key(self, email: str) -> str:
         return User.get_user_model_key(email=email)
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         return 'TableColumnUsage({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(self.database,
                                                                                    self.cluster,
                                                                                    self.schema,

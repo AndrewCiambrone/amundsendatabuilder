@@ -1,4 +1,7 @@
-from typing import Any, Dict, List, Union  # noqa: F401
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
+from typing import List, Optional
 
 from databuilder.models.graph_serializable import GraphSerializable
 
@@ -8,7 +11,7 @@ from databuilder.models.graph_relationship import GraphRelationship
 
 
 class TableSource(GraphSerializable):
-    # type: (...) -> None
+
     """
     Hive table source model.
     """
@@ -18,14 +21,13 @@ class TableSource(GraphSerializable):
     TABLE_SOURCE_RELATION_TYPE = 'SOURCE'
 
     def __init__(self,
-                 db_name,  # type: str
-                 schema,  # type: str
-                 table_name,  # type: str
-                 cluster,  # type: str
-                 source,  # type: str
-                 source_type='github',  # type: str
-                 ):
-        # type: (...) -> None
+                 db_name: str,
+                 schema: str,
+                 table_name: str,
+                 cluster: str,
+                 source: str,
+                 source_type: str='github',
+                 ) -> None:
         self.db = db_name.lower()
         self.schema = schema.lower()
         self.table = table_name.lower()
@@ -37,37 +39,33 @@ class TableSource(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self):
-        # type: (...) -> Union[GraphNode, None]
+    def create_next_node(self) -> Optional[GraphNode]:
         # return the string representation of the data
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_next_relation(self):
-        # type: (...) -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Optional[GraphRelationship]:
         try:
             return next(self._relation_iter)
         except StopIteration:
             return None
 
-    def get_source_model_key(self):
-        # type: (...) -> str
+    def get_source_model_key(self) -> str:
         return TableSource.KEY_FORMAT.format(db=self.db,
                                              cluster=self.cluster,
                                              schema=self.schema,
                                              tbl=self.table)
 
-    def get_metadata_model_key(self):
-        # type: (...) -> str
+    def get_metadata_model_key(self) -> str:
         return '{db}://{cluster}.{schema}/{table}'.format(db=self.db,
                                                           cluster=self.cluster,
                                                           schema=self.schema,
                                                           table=self.table)
 
-    def create_nodes(self):
-        # type: () -> List[GraphNode]
+    def create_nodes(self) -> List[GraphNode]:
+
         """
         Create a list of Neo4j node records
         :return:
@@ -83,8 +81,8 @@ class TableSource(GraphSerializable):
         results = [node]
         return results
 
-    def create_relation(self):
-        # type: () -> List[GraphRelationship]
+    def create_relation(self) -> List[GraphRelationship]:
+
         """
         Create a list of relation map between owner record with original hive table
         :return:
@@ -101,8 +99,7 @@ class TableSource(GraphSerializable):
         results = [relationship]
         return results
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         return 'TableSource({!r}, {!r}, {!r}, {!r}, {!r})'.format(self.db,
                                                                   self.cluster,
                                                                   self.schema,

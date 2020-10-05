@@ -1,7 +1,6 @@
 import abc
 
-import six
-from typing import  Union  # noqa: F401
+from typing import Union  # noqa: F401
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
 
@@ -17,21 +16,18 @@ RELATION_TYPE = 'TYPE'
 RELATION_REVERSE_TYPE = 'REVERSE_TYPE'
 
 
-@six.add_metaclass(abc.ABCMeta)
-class GraphSerializable(object):
+class GraphSerializable(object, metaclass=abc.ABCMeta):
     """
     A Serializable abstract class asks subclass to implement next node or
     next relation in dict form so that it can be serialized to CSV file.
 
     Any model class that needs to be pushed to a graph database should inherit this class.
     """
-    def __init__(self):
-        # type: () -> None
+    def __init__(self) -> None:
         pass
 
     @abc.abstractmethod
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         """
         Creates GraphNode the process that consumes this class takes the output
         serializes to the desired graph database.
@@ -41,8 +37,7 @@ class GraphSerializable(object):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         """
         Creates GraphRelationship the process that consumes this class takes the output
         serializes to the desired graph database.
@@ -51,8 +46,7 @@ class GraphSerializable(object):
         """
         raise NotImplementedError
 
-    def next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def next_node(self) -> Union[GraphNode, None]:
         node_dict = self.create_next_node()
         if not node_dict:
             return None
@@ -60,8 +54,7 @@ class GraphSerializable(object):
         self._validate_node(node_dict)
         return node_dict
 
-    def next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def next_relation(self) -> Union[GraphRelationship, None]:
         relation_dict = self.create_next_relation()
         if not relation_dict:
             return None
@@ -69,8 +62,7 @@ class GraphSerializable(object):
         self._validate_relation(relation_dict)
         return relation_dict
 
-    def _validate_node(self, node):
-        # type: ( GraphNode) -> None
+    def _validate_node(self, node: GraphNode) -> None:
         node_id, node_label, _ = node
 
         if node_id is None:
@@ -81,17 +73,16 @@ class GraphSerializable(object):
 
         self._validate_label_value(node_label)
 
-    def _validate_relation(self, relation):
-        # type: (GraphRelationship) -> None
+    def _validate_relation(self, relation: GraphRelationship) -> None:
         self._validate_label_value(relation.start_label)
         self._validate_label_value(relation.end_label)
         self._validate_relation_type_value(relation.type)
         self._validate_relation_type_value(relation.reverse_type)
 
-    def _validate_relation_type_value(self, value):
+    def _validate_relation_type_value(self, value: str) -> None:
         if not value == value.upper():
             raise RuntimeError('TYPE needs to be upper case: '.format(value))
 
-    def _validate_label_value(self, value):
+    def _validate_label_value(self, value: str) -> None:
         if not value.istitle():
             raise RuntimeError('LABEL should only have upper case character on its first one: {}'.format(value))

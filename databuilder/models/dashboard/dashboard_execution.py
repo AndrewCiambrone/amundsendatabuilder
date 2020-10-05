@@ -1,6 +1,9 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
-from typing import Optional, Dict, Any, Union, Iterator  # noqa: F401
+from typing import Optional, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (GraphSerializable)
@@ -25,15 +28,15 @@ class DashboardExecution(GraphSerializable):
     LAST_SUCCESSFUL_EXECUTION_ID = '_last_successful_execution'
 
     def __init__(self,
-                 dashboard_group_id,  # type: Optional[str]
-                 dashboard_id,  # type: Optional[str]
-                 execution_timestamp,  # type: int
-                 execution_state,  # type: str
-                 execution_id=LAST_EXECUTION_ID,  # type: str
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: str
-                 **kwargs
-                 ):
+                 dashboard_group_id: Optional[str],
+                 dashboard_id: Optional[str],
+                 execution_timestamp: int,
+                 execution_state: str,
+                 execution_id: str = LAST_EXECUTION_ID,
+                 product: Optional[str] = '',
+                 cluster: str = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         self._dashboard_group_id = dashboard_group_id
         self._dashboard_id = dashboard_id
         self._execution_timestamp = execution_timestamp
@@ -44,15 +47,13 @@ class DashboardExecution(GraphSerializable):
         self._node_iterator = self._create_node_iterator()
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iterator)
         except StopIteration:
             return None
 
-    def _create_node_iterator(self):  # noqa: C901
-        # type: () -> Iterator[GraphNode]
+    def _create_node_iterator(self)  -> Iterator[GraphNode]:
         node = GraphNode(
             key=self._get_last_execution_node_key(),
             label=DashboardExecution.DASHBOARD_EXECUTION_LABEL,
@@ -63,15 +64,13 @@ class DashboardExecution(GraphSerializable):
         )
         yield node
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         relationship = GraphRelationship(
             start_label=DashboardMetadata.DASHBOARD_NODE_LABEL,
             start_key=DashboardMetadata.DASHBOARD_KEY_FORMAT.format(
@@ -88,7 +87,7 @@ class DashboardExecution(GraphSerializable):
         )
         yield relationship
 
-    def _get_last_execution_node_key(self):
+    def _get_last_execution_node_key(self) -> str:
         return DashboardExecution.DASHBOARD_EXECUTION_KEY_FORMAT.format(
             product=self._product,
             cluster=self._cluster,
@@ -97,7 +96,7 @@ class DashboardExecution(GraphSerializable):
             execution_id=self._execution_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardExecution({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(
             self._dashboard_group_id,
             self._dashboard_id,

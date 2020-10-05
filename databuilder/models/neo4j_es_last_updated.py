@@ -1,12 +1,14 @@
-from typing import Any, Dict, List, Union  # noqa: F401
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
 
-from databuilder.models.graph_serializable import GraphSerializable, NODE_KEY, NODE_LABEL
+from typing import List, Union
+
+from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_node import GraphNode
 
 
 class Neo4jESLastUpdated(GraphSerializable):
-    # type: (...) -> None
     """
     Data model to keep track the last updated timestamp for
     neo4j and es.
@@ -17,9 +19,8 @@ class Neo4jESLastUpdated(GraphSerializable):
     LATEST_TIMESTAMP = 'latest_timestmap'
 
     def __init__(self,
-                 timestamp,  # type: int
-                 ):
-        # type: (...) -> None
+                 timestamp: int,
+                 ) -> None:
         """
         :param timestamp: epoch for latest updated timestamp for neo4j an es
         """
@@ -27,8 +28,7 @@ class Neo4jESLastUpdated(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._rel_iter = iter(self.create_relation())
 
-    def create_next_node(self):
-        # type: (...) -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         """
         Will create an orphan node for last updated timestamp.
         """
@@ -37,8 +37,7 @@ class Neo4jESLastUpdated(GraphSerializable):
         except StopIteration:
             return None
 
-    def create_nodes(self):
-        # type: () -> List[GraphNode]
+    def create_nodes(self) -> List[GraphNode]:
         """
         Create a list of Neo4j node records.
         """
@@ -51,16 +50,11 @@ class Neo4jESLastUpdated(GraphSerializable):
         )
         return [node]
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
-        """
-        :return:
-        """
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._rel_iter)
         except StopIteration:
             return None
 
-    def create_relation(self):
-        # type: () -> List[GraphRelationship]
+    def create_relation(self) -> List[GraphRelationship]:
         return []

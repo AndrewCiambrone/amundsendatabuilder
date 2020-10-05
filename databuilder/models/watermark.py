@@ -1,4 +1,7 @@
-from typing import Any, Dict, List, Union  # noqa: F401
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
+from typing import List, Optional, Tuple
 
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.graph_node import GraphNode
@@ -6,7 +9,6 @@ from databuilder.models.graph_relationship import GraphRelationship
 
 
 class Watermark(GraphSerializable):
-    # type: (...) -> None
     """
     Table watermark result model.
     Each instance represents one row of table watermark result.
@@ -18,20 +20,19 @@ class Watermark(GraphSerializable):
     TABLE_WATERMARK_RELATION_TYPE = 'WATERMARK'
 
     def __init__(self,
-                 create_time,  # type: str
-                 database,  # type: str
-                 schema,  # type: str
-                 table_name,  # type: str
-                 part_name,  # type: str
-                 part_type='high_watermark',  # type: str
-                 cluster='gold',  # type: str
-                 ):
-        # type: (...) -> None
+                 create_time: str,
+                 database: str,
+                 schema: str,
+                 table_name: str,
+                 part_name: str,
+                 part_type: str='high_watermark',
+                 cluster: str='gold',
+                 ) -> None:
         self.create_time = create_time
         self.database = database.lower()
         self.schema = schema.lower()
         self.table = table_name.lower()
-        self.parts = []  # type: list
+        self.parts: List[Tuple[str, str]] = []
 
         if '=' not in part_name:
             raise Exception('Only partition table has high watermark')
@@ -45,38 +46,33 @@ class Watermark(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self):
-        # type: (...) -> Union[GraphNode, None]
+    def create_next_node(self) -> Optional[GraphNode, None]:
         # return the string representation of the data
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_next_relation(self):
-        # type: (...) -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Optional[GraphRelationship]:
         try:
             return next(self._relation_iter)
         except StopIteration:
             return None
 
-    def get_watermark_model_key(self):
-        # type: (...) -> str
+    def get_watermark_model_key(self) -> str:
         return Watermark.KEY_FORMAT.format(database=self.database,
                                            cluster=self.cluster,
                                            schema=self.schema,
                                            table=self.table,
                                            part_type=self.part_type)
 
-    def get_metadata_model_key(self):
-        # type: (...) -> str
+    def get_metadata_model_key(self) -> str:
         return '{database}://{cluster}.{schema}/{table}'.format(database=self.database,
                                                                 cluster=self.cluster,
                                                                 schema=self.schema,
                                                                 table=self.table)
 
-    def create_nodes(self):
-        # type: () -> List[GraphNode]
+    def create_nodes(self) -> List[GraphNode]:
         """
         Create a list of Neo4j node records
         :return:
@@ -95,8 +91,7 @@ class Watermark(GraphSerializable):
             results.append(part_node)
         return results
 
-    def create_relation(self):
-        # type: () -> List[GraphRelationship]
+    def create_relation(self) -> List[GraphRelationship]:
         """
         Create a list of relation map between watermark record with original table
         :return:

@@ -1,6 +1,9 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
-from typing import Optional, Dict, Any, Union, Iterator  # noqa: F401
+from typing import Optional, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
@@ -25,13 +28,13 @@ class DashboardOwner(GraphSerializable):
     EXECUTION_DASHBOARD_RELATION_TYPE = 'LAST_EXECUTION_OF'
 
     def __init__(self,
-                 dashboard_group_id,  # type: str
-                 dashboard_id,  # type: str
-                 email,  # type: str
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: str
-                 **kwargs
-                 ):
+                 dashboard_group_id: str,
+                 dashboard_id: str,
+                 email: str,
+                 product: Optional[str] = '',
+                 cluster: str = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         self._dashboard_group_id = dashboard_group_id
         self._dashboard_id = dashboard_id
         self._email = email
@@ -40,19 +43,16 @@ class DashboardOwner(GraphSerializable):
 
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         return None
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         relationship = GraphRelationship(
             start_label=DashboardMetadata.DASHBOARD_NODE_LABEL,
             end_label=User.USER_NODE_LABEL,
@@ -69,7 +69,7 @@ class DashboardOwner(GraphSerializable):
         )
         yield relationship
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardOwner({!r}, {!r}, {!r}, {!r}, {!r})'.format(
             self._dashboard_group_id,
             self._dashboard_id,

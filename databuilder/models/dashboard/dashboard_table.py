@@ -1,7 +1,10 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import re
 
-from typing import Optional, Dict, Any, List, Union, Iterator  # noqa: F401
+from typing import Optional, Any, List, Union
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
@@ -24,13 +27,13 @@ class DashboardTable(GraphSerializable):
     TABLE_DASHBOARD_RELATION_TYPE = 'TABLE_OF_DASHBOARD'
 
     def __init__(self,
-                 dashboard_group_id,  # type: str
-                 dashboard_id,  # type: str
-                 table_ids,  # type: List[str]
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: str
-                 **kwargs
-                 ):
+                 dashboard_group_id: str,
+                 dashboard_id: str,
+                 table_ids: List[str],
+                 product: Optional[str] = '',
+                 cluster: str = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         self._dashboard_group_id = dashboard_group_id
         self._dashboard_id = dashboard_id
         # A list of tables uri used in the dashboard
@@ -40,21 +43,20 @@ class DashboardTable(GraphSerializable):
 
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         return None
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
+        if self._relation_iterator is None:
+            return None
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Optional[None, Iterator[GraphRelationship]]
+    def _create_relation_iterator(self) -> Optional[GraphRelationship]:
         for table_id in self._table_ids:
-            m = re.match('(\w+)://(\w+)\.(\w+)\/(\w+)', table_id)
+            m = re.match('([^./]+)://([^./]+)\.([^./]+)\/([^./]+)', table_id)
             if m:
                 relationship = GraphRelationship(
                     start_label=DashboardMetadata.DASHBOARD_NODE_LABEL,
@@ -77,7 +79,7 @@ class DashboardTable(GraphSerializable):
                 )
                 yield relationship
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardTable({!r}, {!r}, {!r}, {!r}, ({!r}))'.format(
             self._dashboard_group_id,
             self._dashboard_id,

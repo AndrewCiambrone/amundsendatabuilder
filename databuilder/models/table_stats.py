@@ -1,4 +1,7 @@
-from typing import List, Union  # noqa: F401
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
+from typing import Any, Dict, List, Optional
 
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.table_metadata import ColumnMetadata
@@ -7,7 +10,7 @@ from databuilder.models.graph_relationship import GraphRelationship
 
 
 class TableColumnStats(GraphSerializable):
-    # type: (...) -> None
+
     """
     Hive table stats model.
     Each instance represents one row of hive watermark result.
@@ -19,17 +22,16 @@ class TableColumnStats(GraphSerializable):
     Column_STAT_RELATION_TYPE = 'STAT'
 
     def __init__(self,
-                 table_name,  # type: str
-                 col_name,  # type: str
-                 stat_name,  # type: str
-                 stat_val,  # type: str
-                 start_epoch,  # type: str
-                 end_epoch,  # type: str
-                 db='hive',  # type: str
-                 cluster='gold',  # type: str
-                 schema=None  # type: str
-                 ):
-        # type: (...) -> None
+                 table_name: str,
+                 col_name: str,
+                 stat_name: str,
+                 stat_val: str,
+                 start_epoch: str,
+                 end_epoch: str,
+                 db: str='hive',
+                 cluster: str='gold',
+                 schema: str=None
+                 ) -> None:
         if schema is None:
             self.schema, self.table = table_name.split('.')
         else:
@@ -45,23 +47,21 @@ class TableColumnStats(GraphSerializable):
         self._node_iter = iter(self.create_nodes())
         self._relation_iter = iter(self.create_relation())
 
-    def create_next_node(self):
-        # type: (...) -> Union[GraphNode, None]
+    def create_next_node(self) -> Optional[GraphNode]:
+
         # return the string representation of the data
         try:
             return next(self._node_iter)
         except StopIteration:
             return None
 
-    def create_next_relation(self):
-        # type: (...) -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Optional[GraphRelationship]:
         try:
             return next(self._relation_iter)
         except StopIteration:
             return None
 
-    def get_table_stat_model_key(self):
-        # type: (...) -> str
+    def get_table_stat_model_key(self) -> str:
         return TableColumnStats.KEY_FORMAT.format(db=self.db,
                                                   cluster=self.cluster,
                                                   schema=self.schema,
@@ -69,8 +69,7 @@ class TableColumnStats(GraphSerializable):
                                                   col=self.col_name,
                                                   stat_name=self.stat_name)
 
-    def get_col_key(self):
-        # type: (...) -> str
+    def get_col_key(self) -> str:
         # no cluster, schema info from the input
         return ColumnMetadata.COLUMN_KEY_FORMAT.format(db=self.db,
                                                        cluster=self.cluster,
@@ -78,8 +77,7 @@ class TableColumnStats(GraphSerializable):
                                                        tbl=self.table,
                                                        col=self.col_name)
 
-    def create_nodes(self):
-        # type: () -> List[GraphNode]
+    def create_nodes(self) -> List[GraphNode]:
         """
         Create a list of Neo4j node records
         :return:
@@ -97,8 +95,7 @@ class TableColumnStats(GraphSerializable):
         results = [node]
         return results
 
-    def create_relation(self):
-        # type: () -> List[GraphRelationship]
+    def create_relation(self) -> List[GraphRelationship]:
         """
         Create a list of relation map between table stat record with original hive table
         :return:

@@ -1,11 +1,14 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
-from typing import Optional, Dict, Any, Union, Iterator  # noqa: F401
+from typing import Optional, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
-    GraphSerializable, RELATION_START_KEY, RELATION_END_KEY, RELATION_START_LABEL,
-    RELATION_END_LABEL, RELATION_TYPE, RELATION_REVERSE_TYPE)
+    GraphSerializable
+)
 from databuilder.models.usage.usage_constants import (
     READ_RELATION_TYPE, READ_REVERSE_RELATION_TYPE, READ_RELATION_COUNT_PROPERTY
 )
@@ -22,16 +25,15 @@ class DashboardUsage(GraphSerializable):
     """
 
     def __init__(self,
-                 dashboard_group_id,  # type: Optional[str]
-                 dashboard_id,  # type: Optional[str]
-                 email,  # type: str
-                 view_count,  # type: int
-                 should_create_user_node=False,  # type: Optional[bool]
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: Optional[str]
-                 **kwargs
-                 ):
-        # type: () -> None
+                 dashboard_group_id: Optional[str],
+                 dashboard_id: Optional[str],
+                 email: str,
+                 view_count: int,
+                 should_create_user_node: Optional[bool] = False,
+                 product: Optional[str] = '',
+                 cluster: Optional[str] = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         """
 
         :param dashboard_group_id:
@@ -56,20 +58,19 @@ class DashboardUsage(GraphSerializable):
         self._should_create_user_node = bool(should_create_user_node)
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self)  -> Union[GraphNode, None]:
         if self._should_create_user_node:
             return self._user_model.create_next_node()
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+        return None
+
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         relationship = GraphRelationship(
             start_label=DashboardMetadata.DASHBOARD_NODE_LABEL,
             end_label=User.USER_NODE_LABEL,
@@ -89,7 +90,7 @@ class DashboardUsage(GraphSerializable):
         )
         yield relationship
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardUsage({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(
             self._dashboard_group_id,
             self._dashboard_id,

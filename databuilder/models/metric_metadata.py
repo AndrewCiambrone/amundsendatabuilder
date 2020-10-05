@@ -1,6 +1,9 @@
-from collections import namedtuple
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
 
-from typing import Union, Iterator, Set, List  # noqa: F401
+from collections import namedtuple
+from typing import Any, Iterator, List, Set, Union
+
 
 # TODO: We could separate TagMetadata from table_metadata to own module
 from databuilder.models.table_metadata import TagMetadata
@@ -64,18 +67,16 @@ class MetricMetadata(GraphSerializable):
     serialized_nodes = set()  # type: Set[GraphNode]
     serialized_rels = set()  # type: Set[GraphRelationship]
 
-    def __init__(
-            self,
-            dashboard_group,  # type: str
-            dashboard_name,  # type: str
-            name,  # type: Union[str, None]
-            expression,   # type: str
-            description,   # type: str
-            type,   # type: str
-            tags,   # type: List
-        ):
-        # type: (...) -> None
 
+    def __init__(self,
+                 dashboard_group: str,
+                 dashboard_name: str,
+                 name: Union[str, None],
+                 expression: str,
+                 description: str,
+                 type: str,
+                 tags: List,
+                 ) -> None:
         self.dashboard_group = dashboard_group
         self.dashboard_name = dashboard_name
         self.name = name
@@ -86,8 +87,7 @@ class MetricMetadata(GraphSerializable):
         self._node_iterator = self._create_next_node()
         self._relation_iterator = self._create_next_relation()
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         return 'MetricMetadata({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r}'.format(
             self.dashboard_group,
             self.dashboard_name,
@@ -98,36 +98,30 @@ class MetricMetadata(GraphSerializable):
             self.tags
         )
 
-    def _get_metric_key(self):
-        # type: () -> str
+    def _get_metric_key(self) -> str:
         return MetricMetadata.METRIC_KEY_FORMAT.format(name=self.name)
 
-    def _get_metric_type_key(self):
-        # type: () -> str
+    def _get_metric_type_key(self) -> str:
         return MetricMetadata.METRIC_TYPE_KEY_FORMAT.format(type=self.type)
 
-    def _get_dashboard_key(self):
-        # type: () -> str
+    def _get_dashboard_key(self) -> str:
         return MetricMetadata.DASHBOARD_KEY_FORMAT.format(dashboard_group=self.dashboard_group,
                                                           dashboard_name=self.dashboard_name)
 
-    def _get_metric_description_key(self):
-        # type: () -> str
+    def _get_metric_description_key(self) -> str:
         return MetricMetadata.METRIC_DESCRIPTION_FORMAT.format(name=self.name)
 
     def _get_metric_expression_key(self):
         # type: () -> str
         return MetricMetadata.METRIC_EXPRESSION_KEY_FORMAT.format(name=self.name)
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iterator)
         except StopIteration:
             return None
 
-    def _create_next_node(self):
-        # type: () -> Iterator[GraphNode]
+    def _create_next_node(self) -> Iterator[GraphNode]:
 
         # Metric node
         metric_node = GraphNode(
@@ -174,22 +168,21 @@ class MetricMetadata(GraphSerializable):
             )
             yield type_node
 
-        others = []
+        # FIXME: this logic is wrong and does nothing presently
+        others: List[Any] = []
 
         for node_tuple in others:
             if node_tuple not in MetricMetadata.serialized_nodes:
                 MetricMetadata.serialized_nodes.add(node_tuple)
                 yield node_tuple
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_next_relation(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_next_relation(self) -> Iterator[GraphRelationship]:
 
         # Dashboard > Metric relation
         dashboard_metric_relation = GraphRelationship(
@@ -243,7 +236,8 @@ class MetricMetadata(GraphSerializable):
             )
             yield type_relation
 
-        others = []
+        # FIXME: this logic is wrong and does nothing presently
+        others: List[Any] = []
 
         for rel_tuple in others:
             if rel_tuple not in MetricMetadata.serialized_rels:

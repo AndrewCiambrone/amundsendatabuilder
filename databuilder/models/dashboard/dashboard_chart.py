@@ -1,6 +1,9 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
-from typing import Optional, Union, Iterator  # noqa: F401
+from typing import Optional, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_query import DashboardQuery
 from databuilder.models.graph_serializable import (
@@ -23,17 +26,17 @@ class DashboardChart(GraphSerializable):
     CHART_REVERSE_RELATION_TYPE = 'CHART_OF'
 
     def __init__(self,
-                 dashboard_group_id,  # type: Optional[str]
-                 dashboard_id,  # type: Optional[str]
-                 query_id,  # type: str
-                 chart_id,  # type: str
-                 chart_name=None,  # type: Optional[str]
-                 chart_type=None,  # type: Optional[str]
-                 chart_url=None,  # type: Optional[str]
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: str
-                 **kwargs
-                 ):
+                 dashboard_group_id: Optional[str],
+                 dashboard_id: Optional[str],
+                 query_id: str,
+                 chart_id: str,
+                 chart_name: Optional[str] = None,
+                 chart_type: Optional[str] = None,
+                 chart_url: Optional[str] = None,
+                 product: Optional[str] = '',
+                 cluster: str = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         self._dashboard_group_id = dashboard_group_id
         self._dashboard_id = dashboard_id
         self._query_id = query_id
@@ -46,16 +49,13 @@ class DashboardChart(GraphSerializable):
         self._node_iterator = self._create_node_iterator()
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[GraphNode, None]
+    def create_next_node(self) -> Union[GraphNode, None]:
         try:
             return next(self._node_iterator)
         except StopIteration:
             return None
 
-    def _create_node_iterator(self):  # noqa: C901
-        # type: () -> Iterator[GraphNode]
-
+    def _create_node_iterator(self) -> Iterator[GraphNode]:
         node_attributes = {
             'id': self._chart_id
         }
@@ -76,15 +76,13 @@ class DashboardChart(GraphSerializable):
         )
         yield node
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         relationship = GraphRelationship(
             start_label=DashboardQuery.DASHBOARD_QUERY_LABEL,
             start_key=DashboardQuery.DASHBOARD_QUERY_KEY_FORMAT.format(
@@ -102,7 +100,7 @@ class DashboardChart(GraphSerializable):
         )
         yield relationship
 
-    def _get_chart_node_key(self):
+    def _get_chart_node_key(self) -> str:
         return DashboardChart.DASHBOARD_CHART_KEY_FORMAT.format(
             product=self._product,
             cluster=self._cluster,
@@ -112,7 +110,7 @@ class DashboardChart(GraphSerializable):
             chart_id=self._chart_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardChart({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(
             self._dashboard_group_id,
             self._dashboard_id,

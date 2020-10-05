@@ -1,6 +1,9 @@
+# Copyright Contributors to the Amundsen project.
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
-from typing import Optional, Dict, Any, Union, Iterator  # noqa: F401
+from typing import Optional, Dict, Any, Union, Iterator
 
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_serializable import (
@@ -23,16 +26,16 @@ class DashboardQuery(GraphSerializable):
     QUERY_DASHBOARD_RELATION_TYPE = 'QUERY_OF'
 
     def __init__(self,
-                 dashboard_group_id,  # type: Optional[str]
-                 dashboard_id,  # type: Optional[str]
-                 query_name,  # type: str
-                 query_id=None,  # type: Optional[str]
-                 url='',  # type: Optional[str]
-                 query_text=None,  # type: Optional[str]
-                 product='',  # type: Optional[str]
-                 cluster='gold',  # type: str
-                 **kwargs
-                 ):
+                 dashboard_group_id: Optional[str],
+                 dashboard_id: Optional[str],
+                 query_name: str,
+                 query_id: Optional[str] = None,
+                 url: Optional[str] = '',
+                 query_text: Optional[str] = None,
+                 product: Optional[str] = '',
+                 cluster: str = 'gold',
+                 **kwargs: Any
+                 ) -> None:
         self._dashboard_group_id = dashboard_group_id
         self._dashboard_id = dashboard_id
         self._query_name = query_name
@@ -44,15 +47,13 @@ class DashboardQuery(GraphSerializable):
         self._node_iterator = self._create_node_iterator()
         self._relation_iterator = self._create_relation_iterator()
 
-    def create_next_node(self):
-        # type: () -> Union[Dict[str, Any], None]
+    def create_next_node(self) -> Union[Dict[str, Any], None]:
         try:
             return next(self._node_iterator)
         except StopIteration:
             return None
 
-    def _create_node_iterator(self):  # noqa: C901
-        # type: () -> Iterator[GraphNode]
+    def _create_node_iterator(self) -> Iterator[GraphNode]:
         node_attributes = {
             'id': self._query_id,
             'name': self._query_name,
@@ -62,7 +63,7 @@ class DashboardQuery(GraphSerializable):
             node_attributes['url'] = self._url
 
         if self._query_text:
-            node_attributes['query_text'] = self._query_tex
+            node_attributes['query_text'] = self._query_text
 
         node = GraphNode(
             key=self._get_query_node_key(),
@@ -72,15 +73,13 @@ class DashboardQuery(GraphSerializable):
 
         yield node
 
-    def create_next_relation(self):
-        # type: () -> Union[GraphRelationship, None]
+    def create_next_relation(self) -> Union[GraphRelationship, None]:
         try:
             return next(self._relation_iterator)
         except StopIteration:
             return None
 
-    def _create_relation_iterator(self):
-        # type: () -> Iterator[GraphRelationship]
+    def _create_relation_iterator(self) -> Iterator[GraphRelationship]:
         relationship = GraphRelationship(
             start_label=DashboardMetadata.DASHBOARD_NODE_LABEL,
             end_label=DashboardQuery.DASHBOARD_QUERY_LABEL,
@@ -97,7 +96,7 @@ class DashboardQuery(GraphSerializable):
         )
         yield relationship
 
-    def _get_query_node_key(self):
+    def _get_query_node_key(self) -> str:
         return DashboardQuery.DASHBOARD_QUERY_KEY_FORMAT.format(
             product=self._product,
             cluster=self._cluster,
@@ -106,7 +105,7 @@ class DashboardQuery(GraphSerializable):
             query_id=self._query_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DashboardQuery({!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(
             self._dashboard_group_id,
             self._dashboard_id,
